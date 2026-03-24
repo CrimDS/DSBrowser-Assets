@@ -1,0 +1,590 @@
+\\Parent Stars have 2 Spaces.
+
+\\\\Primary orbits have 4 spaces.
+
+\\\\\\\\Secondary orbits (moons) have 8 spaces.
+
+\\\\\\\\\\\\Tertiary orbits (moons of moons) have 12 spaces.
+
+Here is your pristine, engine-ready PlanetList.md. You can copy this directly into your project notes or Obsidian database as your single source of truth.
+Markdown
+
+- Andromeda Sector - 
+
+  - Groombridge A (Andromeda) - System
+    - Groombridge B - Star
+    - Groombridge 1 - Lava
+    - Vladimer - Barren
+    - Dusty - Arid
+        - Iragus - Arid
+            - Muabb - Barren
+    - Groombridge 4 - Gas Giant
+        - Yoth - Ice
+        - Hell - Ice
+
+  - Lacaille (Andromeda) - System
+    - Lacaille B - Star
+    - Lopez - Terran
+        - M7827 - Barren
+    - Cydex - Ice
+        - Violet - Ice
+    - Lyle - Gas Giant
+        - Rick - Barren
+        - Sunshine - Barren
+
+  - Sirius A (Andromeda) (K'luth Home System) - System
+    - Sirius B - Star
+    - Sirius 1 - Lava
+    - Sirius 4 - Barren
+    - Taf - Barren
+        - Cya - Arid
+        - 2412 - Barren
+    - Sirius 3 - Barren
+    - Articus - Ice
+        - Articus A - Ice
+    - Sirius 5 - Gas Giant
+        - Becky - Arid
+    - Sirius 6 - Gas Giant
+        - Thadia - Barren
+        - Ha - Barren
+        - Waste - Barren
+        - Rounder - Barren
+        - Sag Hotha (K'luth Homeworld) - Terran
+            - Leaph - Barren
+            - Sag'Keja Fleet Armory - Homegate
+        - Tinka - Barren
+        - Aefl - Lava
+
+- Cassiopeia Sector - 
+
+  - CD+36*15693 (Cassiopeia) (ICC Home System) - System
+    - Filoth - Arid
+    - Pangasic - Ice
+    - Lilly - Barren
+    - Exathra (ICC Homeworld) - Terran
+        - Minuete - Barren
+        - Shi Jie Shipyards - Homegate
+    - Rom Nebula - Nebula
+    - Randis - Gas Giant
+        - Ghadjwero - Arid
+        - Zanny - Barren
+        - Illambic - Barren
+    - Aan - Gas Giant
+        - Kowone - Barren
+        - Arwep - Barren
+        - Oasha - Barren
+        - Keigje - Barren
+        - Uaelas - Ice
+        - Aaya - Barren
+        - Bothfix - Lava
+        - Wallengoad - Barren
+
+  - Kapteyn's Star (Cassiopeia) - System
+    - Metis Nebula - Nebula
+    - Metis - Gas Giant
+        - Arges - Barren
+        - Briaeraus - Barren
+        - Brontes - Barren
+    - Hectaton - Gas Giant
+        - Cottus - Arid
+        - Gyes - Ice
+            - Thypho - Barren
+    - Alone - Barren
+
+  - Tau Ceti (Cassiopoeia) - System
+    - Areal - Barren
+        - Larry's Rock - Arid
+    - Tau Layo - Barren
+    - Bakube - Barren
+        - Punakha - Barren
+    - Ubez - Gas Giant
+        - Iolet - Barren
+        - Farstay - Ice
+        - Ugo 5 - Barren
+    - Lucky - Star
+        - Argrea - Terran
+        - Alantis - Ocean
+
+- Caelum Sector - 
+
+  - Barnard's Star (Caelum) - System
+    - Vica - Lava
+    - Naul - Barren
+        - Qyce - Barren
+        - Fale - Arid
+    - Maurbon - Terran
+        - Jaber - Barren
+        - Jago - Barren
+        - Jahvet - Barren
+        - Jasha - Ocean
+        - Javin - Barren
+        - Jiro - Barren
+    - Eamon - Gas Giant
+        - Ianthae - Ice
+        - Ilsa - Ice
+        - Ilani - Ice
+        - Irina - Barren
+        - Isemene - Barren
+
+  - Cincinnati (Caelum) - System
+    - Grubs - Arid
+        - Outpost Kangaroo - Barren
+        - Two Guns - Barren
+    - No Water - Arid
+    - Upper Atca - Ocean
+        - Lower Atca - Barren
+        - Buffalo - Barren
+    - Sentry Levi - Terran
+        - Little Purgatory - Barren
+    - Valentine - Gas Giant
+        - Bean Station - Ice
+        - Lefox Rush - Barren
+        - Happyland - Ice
+
+  - Epsilon Caranie Aa (Caelum) - System
+    - Polyxena - Barren
+        - Jocasta - Barren
+        - Uma - Barren
+        - Kore - Arid
+        - Phaedra - Barren
+    - Thetis - Lava
+        - Thetis 1 - Ocean
+        - Thetis 2 - Barren
+    - Urd - Ice
+        - Natt - Barren
+    - Great Reef Nebula - Nebula
+    - Lanthae - Gas Giant
+        - Fachta - Barren
+        - Amon - Barren
+        - Astertoth - Barren
+        - Danae - Ocean
+        - Bure - Terran
+
+- Canis Major Sector - 
+
+  - Kaus Borealis (Canis Major) - System
+    - Aruhumo - Gas Giant
+        - Eassl Octavus - Ice
+        - Uolme Septavus - Barren
+    - Aeceru Quintavus - Barren
+    - Melando Decimus - Barren
+
+  - Tetra (Canis Majora) - System
+    - Alinos - Lava
+    - Tetris Nebula - Nebula
+    - Vespar - Ice
+    - Arcterra - Terran
+        - Celesta - Barren
+        - Motroplis - Terran
+        - Vendue - Ocean
+    - Tran - Gas Giant
+        - Outpost 21 - Barren
+    - Val - Ice
+        - Utopic - Barren
+        - Agong - Arid
+        - GB 24 - Gas Giant
+
+  - Xi Bootis (Canis Minor) - System
+    - Lyra - Ocean
+        - MacCabes - Barren
+    - Gunther - Gas Giant
+    - Zephyr - Lava
+    - Thaxius - Terran
+    - Ardenia - Terran
+        - Ixian - Ocean
+        - Ypres - Barren
+        - Darian - Barren
+    - Omicron - Ice
+        - Entreides - Barren
+    - Algae Nebula - Nebula
+
+- Columba Sector - 
+
+  - Andosia (Columba) - System
+    - Tegr - Barren
+    - Burn - Lava
+    - Hamm - Arid
+        - Broth - Ocean  
+    - Trace - Ice
+    - Andosia Prime - Terran
+        - Froh - Barren
+        - Gunny - Barren
+    - Wot - Gas Giant
+        - Hilg - Ice
+    - Dark - Barren
+        - Marder - Barren
+
+  - Critium 32 Major A (Columba) - System
+    - Critium 32c - Barren
+    - Pinta - Barren
+    - Zentos - Terran
+        - Morus - Ocean
+        - Pritium - Barren
+    - Certus - Gas Giant
+        - Gorge - Ice
+    - Zork - Arid
+    - Turanous Shroud Nebula - Nebula
+        - Turanous - Ocean
+
+  - R33-8710 (Columba) (Memorial System) - System
+    - Gardner Nebula - Nebula
+    - Fury - Inferno
+    - Incarnath - Barren
+        - Skyline - Barren
+    - Paul - Terran
+        - Reality - Arid
+        - Benevolence - Barren
+        - Remembrance - Ocean
+    - Haven - Terran
+        - Grace - Ice
+    - Arturion - Gas Giant
+        - Eternity - Barren
+        - Galaxis - Barren
+        - Tattoo - Barren
+        - Illyria - Ice
+
+- Lacerta Sector - 
+
+  - Alpha Centauri A (Lacerta) - System
+    - Alpha Centauri B - Star
+    - G567 - Gas Giant
+        - Tranny - Barren
+        - Regus - Barren
+    - Proxima - Star
+    - Hope - Gas Giant
+        - Nemesis - Barren
+        - Alecto - Barren
+        - Megaera - Barren
+    - Erinyes - Gas Giant
+
+  - Sol (Lacerta) (UGTO Home System) - System
+    - Mercury - Barren
+    - Venus - Terran
+    - Earth - Terran
+        - Luna - Barren
+        - Bifrost Fleet Foundry - Homegate
+    - Mars - Arid
+        - Phobos - Moon
+        - Deimos - Moon
+    - Jupiter - Gas Giant
+        - Amalthea - Moon
+        - Thebe - Moon
+        - Adrastea - Moon
+        - Metis - Moon
+        - Io - Ice Inferno
+        - Europa - Barren
+        - Ganymede - Barren
+        - Callisto - Barren
+    - Saturn - Gas Giant
+        - Mimas - Barren
+        - Enceladus - Barren
+        - Hyperion - Barren
+        - Titan - Barren
+    - Uranus - Gas Giant
+        - Miranda - Barren
+        - Titania - Barren
+        - Oberon - Barren
+    - Neptune - Gas Giant
+        - Proteus - Barren
+        - Triton - Barren
+        - Nereid - Barren
+    - Pluto - Barren
+        - Charon - Barren
+
+  - Struve A (Lacerta) - System
+    - Struve A - Star
+    - Point Blank - Barren
+    - Caddo - Barren
+    - Struve's Folly Nebula - Nebula
+    - Grice - Barren
+        - Twin - Barren
+    - Parcia - Ice
+        - Kataba - Barren
+        - Flana - Barren
+        - Jenith - Barren
+    - Leason - Gas Giant
+        - Nebon - Ice
+        - Rawls - Terran
+        - Chae - Barren
+
+- Norma Sector - 
+
+  - 61 Cyg A (Norma) - System
+    - 61 Cyg B - Star
+    - Zo - Lava
+    - Naix - Barren
+    - Af - Barren
+    - Faobian - Gas Giant
+        - Ahaza - Barren
+        - Lya - Barren
+        - Ozark - Barren
+        - Jenthra - Barren
+        - Junction - Barren
+        - Eu - Barren
+        - Amy's Moon - Barren
+        - Ambrosia - Barren
+    - Azuk - Barren
+    - Dhao (Boonie Cartel) - Gas Giant
+        - Boonie I - Barren
+        - Boonie II - Barren
+        - Lesser Boonie - Barren
+        - Big Boonie - Barren
+        - Boonie's Blue Nebula - Nebula
+
+  - Epsilon Ind (Norma) - System
+    - Dion - Barren
+    - Soxa - Barren
+    - Opose - Gas Giant
+        - Gerty - Barren
+        - Cleoseth - Barren
+        - Boosh - Barren
+        - Obvervan - Barren
+        - G'broagfran - Barren
+    - Talaz - Barren
+    - Eaop - Gas Giant
+        - Kewtek - Barren
+        - Epsidion - Arid
+    - Lhaaoste - Gas Giant
+        - Binya - Barren
+        - Epacost - Lava
+        - Chabbox - Barren
+        - Flavin - Ice
+    - Foydes - Gas Giant
+    - Tamboose - Gas Giant
+    - Avacet - Gas Giant
+        - Bhatazar - Barren
+        - Ey - Barren
+        - Lam - Lava
+        - Delvo - Barren
+
+  - Ross 248 (Norma) - System
+    - Zazap - Gas Giant
+        - Gofbag - Barren
+        - Quinn - Lava
+        - Re - Barren
+            - Hadabba - Barren
+        - Anklo - Barren
+        - Azchu - Ice
+    - Eaoub - Gas Giant
+        - Hathache - Barren
+        - Ebraham - Barren
+        - Enous - Barren
+
+- Pavo Sector - 
+
+  - Delta Pavonis (Pavo) - System
+    - Price - Barren
+    - Zayd - Barren
+    - Kohlia - Gas Giant
+    - Darcel - Arid
+        - Bellema - Barren
+        - Ratana - Barren
+    - Wildon - Gas Giant
+        - Yan - Ice
+            - Quillian - Barren
+            - Laban - Barren
+        - Orayaan - Arid
+            - Sarcha - Barren
+            - Oilal - Barren
+            - Kavia - Barren
+
+  - Epsilon Eri (Pavo) - System
+    - Abzeckotech - Arid
+        - Eyma - Barren
+    - Hwagathi - Barren
+    - Rafraue - Terran
+    - Kasma - Gas Giant
+        - Kyrcheck - Barren
+        - Baiuse - Barren
+        - Maat - Arid
+        - Roacliff - Barren
+    - Aa - Gas Giant
+        - Olaf - Barren
+        - Guiddy - Barren
+        - Oymvre - Ice
+    - Izzy - Gas Giant
+        - Gofagac - Barren
+        - Okag - Terran
+
+  - Procyon A (Pavo) - System
+    - Mangiolon - Barren
+    - Procyon 3 - Terran
+        - Durn - Barren
+    - Antipode - Barren
+    - Edarah - Barren
+    - Luminity - Arid
+    - Procyon 10 - Gas Giant
+    - Procyon 11 - Gas Giant
+    - Procyon 12 - Gas Giant
+        - Lumoco - Barren
+        - Mode Daven - Barren
+        - Layce - Barren
+    - Procyon Obscurity Nebula - Nebula
+    - Procyon 13 - Gas Giant
+        - Lesis - Terran
+            - Liusi - Barren
+    - Procyon 14 - Gas Giant
+        - Garulony - Barren
+        - Dalara - Barren
+        - Zorahio - Ice
+
+- Perseus Sector - 
+
+  - Ross 148 (Perseus) - System
+    - Ross - Barren
+    - Lock's Core - Arid
+        - Fortune - Barren
+        - Bracken Forks - Barren
+        - Elysium - Barren
+    - Amaryllis - Terran
+    - Byrd's Pylon - Barren
+    - Dunit - Gas Giant
+        - El - Barren
+        - Ida - Barren
+
+  - Wolf 359 (Perseus) - System
+    - Wolf 1 - Barren
+    - Ocotat - Terran
+    - Wolf 2 - Gas Giant
+        - Az - Ice
+        - Wolf 2b - Barren
+        - Wolf 2c - Barren
+        - Oceanaia - Ocean
+        - Wolf 2e - Barren
+
+  - Van Maanen (Perseus) - System
+    - Hyuki - Lava
+    - Bil - Lava
+    - Hler - Barren
+        - Unn - Barren
+        - Kari - Barren
+    - Balder - Gas Giant
+        - Ran - Barren
+        - Gefjon - Ice
+
+- Rogen's Rift Sector - 
+
+  - Dres-Kona (Rogen's Rift) (Pirate Homesystem) - System
+    - Twilight Nebula - Nebula
+    - Kyota - Barren
+        - Cota - Barren
+    - Kona - Terran
+        - Pyron - Barren
+        - Oceant - Ocean
+    - Twilight (Pirate Homeworld) - Arid
+        - A Second Twilight Nebula - Nebula
+    - Person - Terran
+        - Destiny - Barren
+    - Rogen's Hideout - Homegate
+    - Sto-vok - Arid
+    - Tar-nak - Arid
+        - Tetron - Barren
+    - Starlight - Ice
+        - Darklight - Ocean
+    - Psc-120 - Gas Giant
+
+  - Ross 348 (Rogen's Rift) - System
+    - Ross 348 B - Star
+    - Trathia - Terran
+    - Ross 8 - Ocean
+        - Ross 9 - Barren
+    - Ross 6 - Barren
+    - Wethinic - Barren
+    - Ross 7 - Lava
+        - Ross 7a - Barren
+        - Ross 7c - Arid
+        - Ross 7b - Barren
+    - Ross 10 - Gas Giant
+    - Ross 11 - Gas Giant
+        - Ross 11a - Ice
+        - Ross 11b - Barren
+
+  - Ross 448 (Rogen's Rift) - System
+    - Chaotia Nebula - Nebula
+    - Gethugianic - Gas Giant
+        - Tetwep - Ocean
+        - Tetrithic - Ice
+    - Roasia - Terran
+        - Pethic - Arid
+    - Rondamic - Ice
+
+- Sagittarius Sector - 
+
+  - BD+ 4344 (Sagittarius) - System
+    - Fae - Inferno
+        - Evast - Barren
+    - Foesta - Barren
+    - Ghext - Barren
+    - Nhezack - Barren
+    - Ahwa - Barren
+    - Andy's Planet - Barren
+
+  - Lalande (Sagittarius) - System
+    - Burning Alb Nebula - Nebula
+    - Rigel - Barren
+    - Yesper - Arid
+        - Ringo - Barren
+        - Ian - Arid
+    - Demaret - Terran
+    - Vegar - Gas Giant
+        - Ugio - Barren
+    - Yahoo - Ice
+    - Iop - Gas Giant
+        - Griffen - Lava
+        - Wesly - Barren
+        - New Pakistan - Ice
+
+  - Luyten 726-8 A (Sagittarius) - System
+    - Luyten 726-8 B - Star
+    - Ihzack - Barren
+    - Luyten's Mist Nebula - Nebula
+    - Zoca - Barren
+        - Ursovica - Terran
+        - Arcona - Arid
+    - Mycopia - Ice
+        - Michille - Barren
+        - Necroph - Barren
+        - Dawn - Barren
+        - Wecamp - Barren
+    - Zeeladia - Ocean
+        - Agrysia - Barren
+        - Euphartova - Barren
+
+- Ursa Minor Sector -
+
+  - Cephid Prime (Ursa Minor) - System
+    - Dragonis - Lava
+    - Cephid I - Barren
+    - Cephid II - Barren
+    - Kruger - Arid
+    - Kirian Ra - Terran
+        - Kakadoo - Arid
+    - Alula Australis - Gas Giant
+        - Aurigae - Arid
+        - Altair - Ice
+    - Cephid Nebula - Nebula
+    - Zeta Velorum - Gas Giant
+    - Trisol - Gas Giant
+        - Panium - Barren
+    - Hyperia - Barren
+
+  - Williams 22 (Ursa Minor) - System
+    - Smoker - Lava
+        - Little Smokey - Barren
+    - Tropic - Terran
+        - Kevlar - Barren
+    - Skate - Ice
+    - Spectre - Gas Giant
+
+  - Williams 38a (Ursa Minor) - System
+    - Williams 38b - Star
+    - Charger - Lava
+    - Deep - Ocean
+        - Cub - Arid
+            - Paw - Barren
+            - Stripe - Barren
+    - Broken - Ice
+    - Bat - Gas Giant
+        - Catcher - Barren
+    - Econo - Terran
+        - Fossil - Barren
