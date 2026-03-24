@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darkspace: Planetary Economy</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #020205; overflow: hidden;
+            font-family: 'Share Tech Mono', 'Courier New', Courier, monospace; 
+            color: #88aadd; user-select: none;
+        }
+        canvas { display: block; }
+        
+        /* Tactical CRT Scanline Overlay */
+        body::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none; z-index: 999; opacity: 0.6;
+        }
+
+        /* Classic Darkspace Panels (Based on Screenshot) */
+        .panel {
+            background: rgba(12, 16, 20, 0.9); 
+            border: 1px solid #4a5a6a;
+            border-radius: 0px; padding: 10px; position: absolute;
+            pointer-events: none; box-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+        }
+        
+        .panel-header { 
+            font-size: 12px; font-weight: bold; 
+            background: #2a3a4a; color: #ffffff; 
+            margin: -10px -10px 10px -10px; padding: 4px 8px;
+            border-bottom: 1px solid #4a5a6a; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        /* Bottom Left: Unified Tactical HUD */
+        #bottom-left-ui { bottom: 10px; left: 10px; width: 550px; display: flex; flex-direction: column; }
+        
+        /* Bottom Right: Target UI */
+        #target-ui { bottom: 10px; right: 10px; width: 280px; display: none; }
+        
+        /* Tactical Bar Styles */
+        .ds-bar-wrapper {
+            flex: 1; height: 18px; background: #05080a;
+            border: 1px solid #2a3a4a; position: relative;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.8); margin-bottom: 6px;
+        }
+        .ds-bar-fill {
+            height: 100%; width: 0%;
+            background-image: linear-gradient(90deg, transparent 90%, rgba(0,0,0,0.5) 90%);
+            background-size: 8px 100%; transition: width 0.1s linear;
+        }
+        .ds-bar-text {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: bold; color: #ffffff;
+            text-shadow: 1px 1px 1px #000, -1px -1px 0 #000;
+            pointer-events: none; white-space: nowrap;
+        }
+        
+        .stat-line { font-size: 12px; margin-bottom: 4px; display: flex; justify-content: space-between; color: #7799bb; }
+        .stat-line span:last-child { color: #aaccff; }
+        
+        .faction-ugto { color: #ff4444 !important; }
+        .faction-icc { color: #44aaff !important; }
+        .faction-kluth { color: #bb44ff !important; }
+        .faction-neutral { color: #aaaaaa !important; }
+
+        /* Terminal-style Deploy Menu */
+        #deploy-menu {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; display: none; background: rgba(5, 8, 12, 0.98);
+            padding: 40px; border: 2px solid #2a3a4a; border-top: 24px solid #1a2a3a;
+            z-index: 20; box-shadow: 0 0 30px rgba(0, 0, 0, 0.9); width: 650px;
+        }
+        #deploy-menu::before {
+            content: "SECURE UPLINK ESTABLISHED // SELECT HULL";
+            position: absolute; top: -20px; left: 10px; color: #88aadd; font-size: 12px; font-weight: bold;
+        }
+
+        .faction-select { display: flex; justify-content: space-around; margin-bottom: 25px; border-bottom: 1px solid #1a2a3a; padding-bottom: 20px;}
+        .faction-btn { 
+            background: #0a0f14; border: 1px solid #2a3a4a; color: #557799; 
+            padding: 10px 20px; cursor: pointer; font-family: 'Share Tech Mono', monospace; 
+            font-weight: bold; transition: 0.2s; font-size: 16px;
+        }
+        .faction-btn:hover { background: #151f2a; color: #88aadd; }
+        .faction-btn.active-ugto { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.1); box-shadow: inset 0 0 10px rgba(255,68,68,0.2); }
+        .faction-btn.active-icc { border-color: #44aaff; color: #44aaff; background: rgba(68,170,255,0.1); box-shadow: inset 0 0 10px rgba(68,170,255,0.2); }
+        .faction-btn.active-kluth { border-color: #bb44ff; color: #bb44ff; background: rgba(187,68,255,0.1); box-shadow: inset 0 0 10px rgba(187,68,255,0.2); }
+        
+        button.deploy-btn {
+            background: #0a0f14; color: #88aadd; border: 1px solid #2a3a4a;
+            padding: 12px 20px; font-size: 14px; cursor: pointer;
+            margin: 8px; font-family: 'Share Tech Mono', monospace; transition: all 0.1s;
+            text-align: left; width: calc(50% - 16px); position: relative;
+        }
+        button.deploy-btn:hover { 
+            background: #1a2a3a; border-color: #44aaff; color: #ffffff;
+            box-shadow: 0 0 10px rgba(68,170,255,0.2);
+        }
+        button.deploy-btn::after {
+            content: ">>"; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); opacity: 0; transition: 0.1s;
+        }
+        button.deploy-btn:hover::after { opacity: 1; color: #44aaff; }
+        
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #44aaff; font-size: 28px; font-weight: bold; z-index: 100;
+            text-shadow: 0 0 15px rgba(68,170,255,0.6); letter-spacing: 2px;
+        }
+        #fps-counter { position: absolute; top: 15px; right: 15px; font-size: 14px; color: #44ff44; font-weight: bold; text-shadow: 0 0 5px rgba(68,255,68,0.5); }
+
+        /* PLANET VIEW UI */
+        #planet-view {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(4, 6, 8, 0.98); z-index: 50;
+        }
+        #pv-title {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            font-size: 28px; font-weight: bold; letter-spacing: 3px;
+        }
+        #pv-stats-header {
+            position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
+            font-size: 15px; color: #aaccff; background: #0a0f14; padding: 8px 25px; border: 1px solid #2a3a4a;
+            display: flex; gap: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #pv-canvas {
+            position: absolute; top: 125px; left: 50%; transform: translateX(-50%);
+            border: 2px solid #2a3a4a; cursor: crosshair; background: #020304;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        #pv-build-menu {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-wrap: wrap; gap: 10px; background: rgba(8, 12, 16, 0.95); padding: 20px; border: 2px solid #2a3a4a; border-top: 18px solid #1a2a3a;
+            width: 85%; max-height: 280px; overflow-y: auto; justify-content: flex-start;
+        }
+        #pv-build-menu::before {
+            content: "CONSTRUCTION MATRIX // SELECT FACILITY"; position: absolute; top: -18px; left: 10px; color: #88aadd; font-size: 12px; font-weight: bold;
+        }
+        .build-item {
+            background: #0a0f14; border: 1px solid #2a3a4a; color: #88aadd; padding: 10px;
+            cursor: pointer; width: calc(25% - 10px); box-sizing: border-box; font-family: 'Share Tech Mono', monospace;
+            display: flex; flex-direction: column; align-items: flex-start; text-align: left; transition: 0.1s;
+            position: relative;
+        }
+        .build-item:hover { background: #151f2a; border-color: #44aaff; color: #ffffff; }
+        .build-item.disabled { opacity: 0.5; cursor: not-allowed; border-color: #1a2a3a; background: #05080a; }
+        .build-item.disabled:hover { background: #05080a; border-color: #1a2a3a; color: #88aadd; }
+        
+        .build-title { font-weight: bold; color: #ffffff; font-size: 14px; margin-bottom: 6px; letter-spacing: 1px;}
+        .build-desc { font-size: 12px; color: #7799bb; margin-bottom: 8px; line-height: 1.3; flex-grow: 1;}
+        .build-stats { font-size: 11px; color: #ffaa00; margin-top: auto;}
+        .build-fail-msg { position: absolute; top: 0; right: 0; background: #cc2222; color: #fff; font-size: 10px; padding: 3px 6px; font-weight: bold; letter-spacing: 1px;}
+        
+        .node-info { position: absolute; bottom: 330px; left: 50%; transform: translateX(-50%); font-size: 18px; color: #fff; background: rgba(0,0,0,0.8); padding: 8px 20px; border: 1px dashed #44aaff;}
+        
+        /* Compact Gadget Grid (From Screenshot) */
+        #gadget-list-container { 
+            border-bottom: 1px solid #2a3a4a; padding-bottom: 8px; margin-bottom: 10px;
+        }
+        #gadget-list {
+            display: flex; flex-wrap: wrap; gap: 4px;
+            align-content: start;
+        }
+        .gadget-btn { 
+            width: 40px; height: 40px;
+            background: rgba(5, 8, 12, 0.8); border: 1px solid #2a3a4a;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: inset 0 0 8px rgba(0,0,0,0.9);
+        }
+        .gadget-btn.ready { border-color: #44ff44; box-shadow: inset 0 0 10px rgba(68,255,68,0.15); }
+        .gadget-btn.cooldown { border-color: #ffaa00; }
+        .gadget-btn.no-energy { border-color: #ff4444; background: rgba(255,68,68,0.1); }
+        
+        .gadget-icon-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1;}
+        .gadget-sub { z-index: 2; font-size: 9px; color: #fff; margin-top: 24px; text-shadow: 1px 1px 1px #000; font-weight: bold;}
+        .gadget-cd-overlay { position: absolute; left: 0; bottom: 0; width: 100%; background: rgba(255, 170, 0, 0.4); z-index: 3; transition: height 0.1s linear;}
+        .gadget-btn:hover { background: #1a2a3a; border-color: #88aadd; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div id="loading">OPTIMIZING UNIVERSE...</div>
+    <div id="fps-counter">60 FPS</div>
+
+    <div id="deploy-menu">
+        <h2 style="margin-top:0; color:#fff;">FLEET DEPLOYMENT</h2>
+        
+        <div class="faction-select">
+            <div class="faction-btn active-ugto" id="fac-btn-1" onclick="selectFaction(1)">UGTO MILITARY</div>
+            <div class="faction-btn" id="fac-btn-2" onclick="selectFaction(2)">ICC SYNDICATE</div>
+            <div class="faction-btn" id="fac-btn-3" onclick="selectFaction(3)">K'LUTH HIVE</div>
+        </div>
+        
+        <p style="color:#aaa; font-size: 14px; margin-bottom: 20px;" id="deploy-msg">Select a hull class to spawn at your capital.</p>
+        
+        <div id="dynamic-ship-list" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+            <!-- Ships will be injected here automatically from ships.json -->
+        </div>
+    </div>
+
+    <!-- UNIFIED BOTTOM LEFT UI (Refactored to Horizontal Layout) -->
+    <div id="bottom-left-ui" class="panel" style="display:none;">
+        <div class="panel-header" id="ship-name-header" style="display:flex; justify-content: space-between;">
+            <span>UGTO SHIP</span>
+            <span id="jump-status-display" style="color:#00ff00; font-size:10px;">READY</span>
+        </div>
+        
+        <!-- ROW 1: Gadgets -->
+        <div id="gadget-list-container">
+            <div id="gadget-list"></div>
+        </div>
+
+        <!-- ROW 2: Velocity & Heading -->
+        <div style="display: flex; gap: 10px;">
+            <div class="ds-bar-wrapper">
+                <div id="velocity-bar" class="ds-bar-fill" style="background: #2288cc;"></div>
+                <div class="ds-bar-text" id="velocity-text">0.00 / 0.00 Velocity</div>
+            </div>
+            <div class="ds-bar-wrapper">
+                <div id="heading-bar" class="ds-bar-fill" style="background: #555555;"></div>
+                <div class="ds-bar-text" id="heading-text">0 Heading</div>
+            </div>
+        </div>
+
+        <!-- ROW 3: Hull, Energy, Signature -->
+        <div style="display: flex; gap: 10px;">
+            <div class="ds-bar-wrapper">
+                <div id="hull-bar" class="ds-bar-fill" style="background: #cc2222;"></div>
+                <div class="ds-bar-text" id="hull-text">0 / 0 (100%) Hull</div>
+            </div>
+            <div class="ds-bar-wrapper">
+                <div id="energy-bar" class="ds-bar-fill" style="background: #ffaa00;"></div>
+                <div class="ds-bar-text" id="energy-text">0 / 0 Energy</div>
+            </div>
+            <div class="ds-bar-wrapper">
+                <div id="sig-bar" class="ds-bar-fill" style="background: #8844cc;"></div>
+                <div class="ds-bar-text" id="sig-text">0.0 Signature</div>
+            </div>
+        </div>
+        
+        <div id="build-prompt" style="display:none; color: #ffaa00; font-weight: bold; margin-top: 5px; text-align: center; border: 1px dashed #ffaa00; padding: 3px; font-size:11px;">[B] ACCESS PLANET GRID</div>
+    </div>
+
+    <!-- TARGET UI (Moved to Bottom Right) -->
+    <div id="target-ui" class="panel" style="display:none;">
+        <div class="panel-header" id="target-name">UNKNOWN ENTITY</div>
+        <div class="stat-line"><span>Affiliation:</span> <span id="target-faction">Unknown</span></div>
+        <div class="stat-line"><span>Classification:</span> <span id="target-class" style="color:#fff;">Planet</span></div>
+        <div class="stat-line" id="target-pop-line"><span>Population:</span> <span id="target-pop">0 M</span></div>
+        <div style="margin-top: 8px; font-size: 10px; color: #7799bb; font-weight:bold;">DEFENSE INTEGRITY</div>
+        <div class="bar-container" style="height: 12px; margin-top: 2px; margin-bottom: 0;">
+            <div id="target-defense-bar" class="bar" style="background-color: #44aaff; width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- PLANET VIEW UI -->
+    <div id="planet-view">
+        <div id="pv-title">PLANET NAME</div>
+        <div id="pv-stats-header">
+            <span>RES: <span id="pv-res">0</span></span>
+            <span style="color:#00ffff">TECH: <span id="pv-tech">0</span></span>
+            <span style="color:#ffaa00">POWER: <span id="pv-pwr">0/0</span></span>
+            <span style="color:#aaffaa">WORKERS: <span id="pv-work">0/0</span></span>
+        </div>
+        <button onclick="closePlanetView()" style="position:absolute; top:20px; right:20px; background:#ff3333; color:#fff; border:none; padding:10px 20px; cursor:pointer; font-family:'Courier New'; font-weight:bold;">CLOSE [B]</button>
+        <canvas id="pv-canvas" width="800" height="400"></canvas>
+        <div class="node-info" id="pv-node-info">Select a grid node to construct facilities.</div>
+        <div id="pv-build-menu" style="display:none;"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // --- SPRITE MANAGER (PIXEL ART GENERATOR & DYNAMIC PIXELATOR) ---
+        const SPRITE_CONFIG = {
+            // Paste your actual Darkspace PNG URLs here. The engine will download them and auto-pixelate them!
+            URLS: {
+                UGTO_DREADNOUGHT: "",
+                UGTO_ENGINEER: "",
+                ICC_DREADNOUGHT: "",
+                // Swapped to the direct Imgur link (.png) instead of the album link (/a/)
+                ICC_ENGINEER: "https://i.imgur.com/j69wtuo.png",
+                KLUTH_DREADNOUGHT: "",
+                KLUTH_ENGINEER: ""
+            },
+            
+            // PROCEDURAL PIXEL ART (Fallback if URLs are empty)
+            // . = Transparent, D = Dark Outline, M = Main Hull, L = Light/Trim, A = Faction Accent
+            PIXELS: {
+                UGTO_DREADNOUGHT: [
+                    "DDDDDD.........",
+                    "DMMMMMDDD......",
+                    "DMAMMMMMMDD....",
+                    "DMMMMMMMMMDD...",
+                    "DLMMMMMMMMMMD..",
+                    "DMMMMMMMMMMMMD.",
+                    "DMAMMMMMMMMMMDD",
+                    "DMMLMMMMMMMMMMD",
+                    "DMAMMMMMMMMMMDD",
+                    "DMMMMMMMMMMMMD.",
+                    "DLMMMMMMMMMMD..",
+                    "DMMMMMMMMMDD...",
+                    "DMAMMMMMMDD....",
+                    "DMMMMMDDD......",
+                    "DDDDDD........."
+                ],
+                UGTO_ENGINEER: [
+                    "...............",
+                    "...DDDD........",
+                    "..DMMMDD.......",
+                    ".DMMAMMDD......",
+                    ".DMLMMMMMD.....",
+                    ".DMMMMMMMMD....",
+                    ".DMMAMMMMMMD...",
+                    ".DMMMMMMMMMMD..",
+                    ".DMMAMMMMMMD...",
+                    ".DMMMMMMMMD....",
+                    ".DMLMMMMMD.....",
+                    ".DMMAMMDD......",
+                    "..DMMMDD.......",
+                    "...DDDD........",
+                    "..............."
+                ],
+                ICC_DREADNOUGHT: [
+                    "............DD.",
+                    ".........DDDD..",
+                    "......DDDDLMD..",
+                    "....DDDDMMMMD..",
+                    "...DDMMMMMMMD..",
+                    "..DDLMMMMMMMD..",
+                    ".DDMMMMMMMMMD..",
+                    "DDMMMMMMMMMADD.",
+                    ".DDMMMMMMMMMD..",
+                    "..DDLMMMMMMMD..",
+                    "...DDMMMMMMMD..",
+                    "....DDDDMMMMD..",
+                    "......DDDDLMD..",
+                    ".........DDDD..",
+                    "............DD."
+                ],
+                ICC_ENGINEER: [
+                    "...............",
+                    ".......DD......",
+                    ".....DDMMD.....",
+                    "....DDLMMMD....",
+                    "...DDMMMMMMD...",
+                    "..DDMMMMMMMMD..",
+                    ".DDAMMMMMMMMD..",
+                    "DDMMMMMMMMMMMD.",
+                    ".DDAMMMMMMMMD..",
+                    "..DDMMMMMMMMD..",
+                    "...DDMMMMMMD...",
+                    "....DDLMMMD....",
+                    ".....DDMMD.....",
+                    ".......DD......",
+                    "..............."
+                ],
+                KLUTH_DREADNOUGHT: [
+                    "..DD...........",
+                    ".DMMD...DD.....",
+                    "DMMMMD.DLMD....",
+                    "DMMMMDDMMMD....",
+                    "DLMMMMMMMMDD...",
+                    "DMMMMMMMMMMMD..",
+                    "DMMAMMMMMMMMMD.",
+                    "DMMMMMLMMMMMMAD",
+                    "DMMAMMMMMMMMMD.",
+                    "DMMMMMMMMMMMD..",
+                    "DLMMMMMMMMDD...",
+                    "DMMMMDDMMMD....",
+                    "DMMMMD.DLMD....",
+                    ".DMMD...DD.....",
+                    "..DD..........."
+                ],
+                KLUTH_ENGINEER: [
+                    "...............",
+                    "....DDD........",
+                    "...DMMMD.......",
+                    "..DMMMMMD.DD...",
+                    ".DMLMMMMMDDMD..",
+                    "DDMMMMMMMMMMD..",
+                    "DMMAMMMMMMMMD..",
+                    "DMMMMLMMMMMMMD.",
+                    "DMMAMMMMMMMMD..",
+                    "DDMMMMMMMMMMD..",
+                    ".DMLMMMMMDDMD..",
+                    "..DMMMMMD.DD...",
+                    "...DMMMD.......",
+                    "....DDD........",
+                    "..............."
+                ]
+            },
+            PALETTES: {
+                1: { D: '#111111', M: '#555555', L: '#888888', A: '#ff3333' }, // UGTO
+                2: { D: '#112233', M: '#6688aa', L: '#aabbcc', A: '#00ffff' }, // ICC
+                3: { D: '#1a052a', M: '#4a1a5a', L: '#7a3a8a', A: '#44ff44' }  // KLUTH
+            },
+            CACHED_CANVASES: {}
+        };
+
+        function initSprites() {
+            for (let faction of [1, 2, 3]) {
+                let prefix = faction === 1 ? 'UGTO' : faction === 2 ? 'ICC' : 'KLUTH';
+                for (let type of ['DREADNOUGHT', 'ENGINEER']) {
+                    let key = `${prefix}_${type}`;
+                    
+                    // 1. Setup Procedural Pixel Art Fallback
+                    let fallbackCanvas = document.createElement('canvas');
+                    fallbackCanvas.width = 30; fallbackCanvas.height = 30;
+                    let fCtx = fallbackCanvas.getContext('2d');
+                    let pattern = SPRITE_CONFIG.PIXELS[key];
+                    let pal = SPRITE_CONFIG.PALETTES[faction];
+                    
+                    if (pattern) {
+                        for(let y=0; y<pattern.length; y++) {
+                            for(let x=0; x<pattern[y].length; x++) {
+                                let char = pattern[y][x];
+                                if (char !== '.') {
+                                    fCtx.fillStyle = pal[char] || '#fff';
+                                    fCtx.fillRect(x*2, y*2, 2, 2);
+                                }
+                            }
+                        }
+                    }
+                    // Assign fallback
+                    SPRITE_CONFIG.CACHED_CANVASES[key] = fallbackCanvas;
+
+                    // 2. Load External Image and Auto-Pixelate it Perfectly!
+                    if (SPRITE_CONFIG.URLS[key]) {
+                        let img = new Image();
+                        img.crossOrigin = "Anonymous";
+                        img.src = SPRITE_CONFIG.URLS[key];
+                        img.onload = () => {
+                            // Extract raw pixel data from the full image
+                            let tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = img.width; tempCanvas.height = img.height;
+                            let tCtx = tempCanvas.getContext('2d');
+                            tCtx.drawImage(img, 0, 0);
+                            
+                            let srcData;
+                            try {
+                                srcData = tCtx.getImageData(0, 0, img.width, img.height);
+                            } catch(e) {
+                                console.warn("CORS blocked pixel access. Image will not be perfectly pixelated.");
+                            }
+
+                            // Define the retro grid size
+                            let targetRes = type === 'DREADNOUGHT' ? 64 : 32; 
+                            let pixCanvas = document.createElement('canvas');
+                            pixCanvas.width = targetRes; pixCanvas.height = targetRes;
+                            let pCtx = pixCanvas.getContext('2d');
+
+                            if (srcData) {
+                                // Manual Nearest-Neighbor Downscaling Algorithm
+                                let tgtData = pCtx.createImageData(targetRes, targetRes);
+                                let ratioX = img.width / targetRes;
+                                let ratioY = img.height / targetRes;
+                                
+                                for (let y = 0; y < targetRes; y++) {
+                                    for (let x = 0; x < targetRes; x++) {
+                                        let srcX = Math.floor(x * ratioX);
+                                        let srcY = Math.floor(y * ratioY);
+                                        let srcIdx = (srcY * img.width + srcX) * 4;
+                                        let tgtIdx = (y * targetRes + x) * 4;
+                                        
+                                        // Snap alpha to prevent fuzzy interpolated edges
+                                        let alpha = srcData.data[srcIdx + 3] < 128 ? 0 : 255;
+                                        
+                                        tgtData.data[tgtIdx] = srcData.data[srcIdx];       // R
+                                        tgtData.data[tgtIdx+1] = srcData.data[srcIdx+1];   // G
+                                        tgtData.data[tgtIdx+2] = srcData.data[srcIdx+2];   // B
+                                        tgtData.data[tgtIdx+3] = alpha;                    // A
+                                    }
+                                }
+                                pCtx.putImageData(tgtData, 0, 0);
+                            } else {
+                                // Fallback to browser scaling if CORS fails
+                                pCtx.imageSmoothingEnabled = false;
+                                pCtx.drawImage(img, 0, 0, targetRes, targetRes);
+                            }
+                            
+                            // Replace the procedural fallback with our perfect retro sprite
+                            SPRITE_CONFIG.CACHED_CANVASES[key] = pixCanvas;
+                        };
+                    }
+                }
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let score = 0; let isGameOver = true; 
+        let selectedFactionForDeploy = 1; 
+        
+        let lastTime = performance.now(); let frames = 0; let fps = 60;
+
+        const FACTIONS = {
+            NEUTRAL: { id: 0, name: 'Neutral', color: '#aaaaaa', class: 'faction-neutral', capital: null },
+            UGTO: { id: 1, name: 'UGTO', color: '#ff3333', class: 'faction-ugto', capital: {x: -20000, y: 18500} },
+            ICC: { id: 2, name: 'ICC', color: '#3388ff', class: 'faction-icc', capital: {x: 22500, y: -12500} },
+            KLUTH: { id: 3, name: 'K\'Luth', color: '#aa33ff', class: 'faction-kluth', capital: {x: -22500, y: -22500} }
+        };
+
+        // Combine fallback definitions directly into the primary let declaration
+        let SHIP_DATABASE = {
+            'UGTO_DREADNOUGHT': {
+                key: 'UGTO_DREADNOUGHT', name: "HEAVY DREADNOUGHT", factionId: 1, type: "DREADNOUGHT",
+                length: 140, width: 60, radius: 70, 
+                acceleration: 0.001, maxSpeed: 1.6, rudderSpeed: 0.006, maxTurnRate: 0.005, 
+                maxHealth: 150000, maxEnergy: 12000, energyRegen: 40,
+                maxFuel: 1000, jumpCost: 250, jumpSpeed: 100, jumpSpoolTime: 300, jumpCooldownTime: 1800,
+                mounts: [
+                    { gadget: 'WEAPONDEATHBEAM', offX: 30, offY: 0, baseAngle: 0, arcRange: Math.PI/2.5 },
+                    { gadget: 'WEAPONPULSEBEAM', offX: -15, offY: -25, baseAngle: -Math.PI/2, arcRange: Math.PI/1.2 },
+                    { gadget: 'WEAPONPULSEBEAM', offX: -15, offY: 25, baseAngle: Math.PI/2, arcRange: Math.PI/1.2 },
+                    { gadget: 'WEAPONEMPMISSILE', offX: -40, offY: 0, baseAngle: Math.PI, arcRange: Math.PI }
+                ]
+            },
+            'ICC_DREADNOUGHT': {
+                key: 'ICC_DREADNOUGHT', name: "HEAVY DREADNOUGHT", factionId: 2, type: "DREADNOUGHT",
+                length: 130, width: 70, radius: 70, 
+                acceleration: 0.0015, maxSpeed: 2.0, rudderSpeed: 0.008, maxTurnRate: 0.007, 
+                maxHealth: 120000, maxEnergy: 15000, energyRegen: 50,
+                maxFuel: 1200, jumpCost: 200, jumpSpeed: 120, jumpSpoolTime: 250, jumpCooldownTime: 1500,
+                mounts: [
+                    { gadget: 'WEAPONPARTICLECANNONHV', offX: 30, offY: 0, baseAngle: 0, arcRange: Math.PI/2.5 },
+                    { gadget: 'WEAPONPARTICLECANNON', offX: -10, offY: -25, baseAngle: -Math.PI/2, arcRange: Math.PI/1.2 },
+                    { gadget: 'WEAPONPARTICLECANNON', offX: -10, offY: 25, baseAngle: Math.PI/2, arcRange: Math.PI/1.2 },
+                    { gadget: 'WEAPONARMISSILE', offX: -40, offY: 0, baseAngle: Math.PI, arcRange: Math.PI }
+                ]
+            },
+            'KLUTH_DREADNOUGHT': {
+                key: 'KLUTH_DREADNOUGHT', name: "LEVIATHAN", factionId: 3, type: "DREADNOUGHT",
+                length: 150, width: 80, radius: 75, 
+                acceleration: 0.0008, maxSpeed: 1.4, rudderSpeed: 0.005, maxTurnRate: 0.004, 
+                maxHealth: 180000, maxEnergy: 10000, energyRegen: 60,
+                maxFuel: 800, jumpCost: 300, jumpSpeed: 90, jumpSpoolTime: 350, jumpCooldownTime: 2000,
+                mounts: [
+                    { gadget: 'WEAPONMOUTHBEAM', offX: 40, offY: 0, baseAngle: 0, arcRange: Math.PI/4 },
+                    { gadget: 'WEAPONPSICANNON', offX: 0, offY: -30, baseAngle: -Math.PI/2, arcRange: Math.PI/1.2 },
+                    { gadget: 'WEAPONPSICANNON', offX: 0, offY: 30, baseAngle: Math.PI/2, arcRange: Math.PI/1.2 },
+                    { gadget: 'WEAPONPSIONICMISSILE', offX: -30, offY: 0, baseAngle: Math.PI, arcRange: Math.PI }
+                ]
+            },
+            'UGTO_ENGINEER': {
+                key: 'UGTO_ENGINEER', name: "COMBAT ENGINEER", factionId: 1, type: "ENGINEER",
+                length: 80, width: 45, radius: 40, 
+                acceleration: 0.003, maxSpeed: 3.5, rudderSpeed: 0.015, maxTurnRate: 0.012, 
+                maxHealth: 40000, maxEnergy: 5000, energyRegen: 20,
+                maxFuel: 1500, jumpCost: 150, jumpSpeed: 150, jumpSpoolTime: 180, jumpCooldownTime: 600, 
+                mounts: [
+                    { gadget: 'CONSTRUCTOR_BAY', offX: 0, offY: 0, baseAngle: 0, arcRange: 0 },
+                    { gadget: 'WEAPONPULSEBEAM', offX: 10, offY: 0, baseAngle: 0, arcRange: Math.PI }
+                ]
+            },
+            'ICC_ENGINEER': {
+                key: 'ICC_ENGINEER', name: "COMBAT ENGINEER", factionId: 2, type: "ENGINEER",
+                length: 80, width: 45, radius: 40, 
+                acceleration: 0.0035, maxSpeed: 3.8, rudderSpeed: 0.018, maxTurnRate: 0.015, 
+                maxHealth: 35000, maxEnergy: 6000, energyRegen: 25,
+                maxFuel: 1500, jumpCost: 150, jumpSpeed: 150, jumpSpoolTime: 180, jumpCooldownTime: 600, 
+                mounts: [
+                    { gadget: 'CONSTRUCTOR_BAY', offX: 0, offY: 0, baseAngle: 0, arcRange: 0 },
+                    { gadget: 'WEAPONPARTICLECANNON', offX: 10, offY: 0, baseAngle: 0, arcRange: Math.PI }
+                ]
+            },
+            'KLUTH_ENGINEER': {
+                key: 'KLUTH_ENGINEER', name: "HIVE BUILDER", factionId: 3, type: "ENGINEER",
+                length: 85, width: 50, radius: 45, 
+                acceleration: 0.0025, maxSpeed: 3.2, rudderSpeed: 0.012, maxTurnRate: 0.010, 
+                maxHealth: 45000, maxEnergy: 4000, energyRegen: 30,
+                maxFuel: 1500, jumpCost: 150, jumpSpeed: 150, jumpSpoolTime: 180, jumpCooldownTime: 600, 
+                mounts: [
+                    { gadget: 'CONSTRUCTOR_BAY', offX: 0, offY: 0, baseAngle: 0, arcRange: 0 },
+                    { gadget: 'WEAPONPSICANNON', offX: 10, offY: 0, baseAngle: 0, arcRange: Math.PI }
+                ]
+            }
+        };
+
+        // Auto-parser for ships.json to bridge with GADGET_DATABASE!
+        function loadShipsFromJSON(shipsArray) {
+            shipsArray.forEach(ship => {
+                let factionId = ship.faction.toLowerCase() === 'ugto' ? 1 : (ship.faction.toLowerCase() === 'icc' ? 2 : 3);
+                let prefix = factionId === 1 ? 'UGTO' : (factionId === 2 ? 'ICC' : 'KLUTH');
+                let shipKey = `${prefix}_${ship.ship_class.toUpperCase()}_${ship.display_name.toUpperCase().replace(/\s+/g, '')}`;
+                
+                let mounts = [];
+                if (ship.gadgets) {
+                    ship.gadgets.forEach(g => {
+                        // Attempt to map prt_path to our uppercase GADGET ID format
+                        let rawName = g.prt_path.split('/').pop().replace('.prt', '').toUpperCase().replace(/\s+/g, '');
+                        
+                        // Crude auto-map logic (e.g. "TACHYONDRIVE" -> "JUMPDRIVETACHYON")
+                        let gadgetId = null;
+                        if (rawName.includes('TACHYON')) gadgetId = 'JUMPDRIVETACHYON';
+                        else if (rawName.includes('ACTIVESHIELD')) gadgetId = 'SHIELDACTIVE';
+                        else if (rawName.includes('CLEXTENDED')) gadgetId = 'WEAPONCLER';
+                        else if (rawName.includes('ARMORSTANDARD')) gadgetId = 'ARMORSTANDARD';
+                        else if (rawName.includes('CONSTRUCTOR')) gadgetId = 'CONSTRUCTOR_BAY';
+                        else if (GADGET_DATABASE[rawName]) gadgetId = rawName;
+                        else {
+                            // Find best match in DB
+                            for(let k in GADGET_DATABASE) { if (k.includes(rawName) || rawName.includes(k)) { gadgetId = k; break; } }
+                        }
+
+                        if (gadgetId && GADGET_DATABASE[gadgetId]) {
+                            // Infer arc and position from the slot_name!
+                            let angle = 0; let offX = 0; let offY = 0; let arc = Math.PI / 2;
+                            let sName = g.slot_name.toUpperCase();
+                            
+                            if (sName.endsWith(' F') || sName.includes('FORWARD')) { angle = 0; offX = 30; }
+                            else if (sName.endsWith(' P') || sName.includes('PORT')) { angle = -Math.PI/2; offY = -20; arc = Math.PI; }
+                            else if (sName.endsWith(' S') || sName.includes('STARBOARD')) { angle = Math.PI/2; offY = 20; arc = Math.PI; }
+                            else if (sName.endsWith(' A') || sName.includes('AFT')) { angle = Math.PI; offX = -30; }
+                            else if (sName.includes('FULL')) { arc = Math.PI * 2; } // 360 turret
+
+                            mounts.push({ gadget: gadgetId, offX: offX, offY: offY, baseAngle: angle, arcRange: arc });
+                        }
+                    });
+                }
+
+                // Parse Base Stats (with fallbacks if the JSON doesn't provide them yet)
+                let bs = ship.base_stats || {};
+
+                SHIP_DATABASE[shipKey] = {
+                    key: shipKey,
+                    name: ship.display_name.toUpperCase(),
+                    factionId: factionId,
+                    type: ship.ship_class.toUpperCase(),
+                    length: bs.length || 130, width: bs.width || 70, radius: bs.radius || 70,
+                    acceleration: bs.acceleration || 0.0015, maxSpeed: bs.maxSpeed || 2.0, 
+                    rudderSpeed: bs.rudderSpeed || 0.008, maxTurnRate: bs.maxTurnRate || 0.007,
+                    maxHealth: bs.armor || 120000, maxEnergy: bs.energy || 15000, energyRegen: bs.energyRegen || 50,
+                    maxFuel: bs.fuel || 1200, jumpCost: 200, jumpSpeed: 120, jumpSpoolTime: 250, jumpCooldownTime: 1500,
+                    mounts: mounts
+                };
+            });
+        }
+
+        // We will fetch this dynamically now!
+        let RAW_SHIPS_JSON = [];
+
+        // --- ENHANCED STRUCTURE DATABASE (Includes precise costs and yields) ---
+        const RAW_BUILDINGS = [
+            { id: 'HUB', icc: 'ICC Colony Hub', ugto: 'UGTO Command Hub', kluth: 'Hive Hub', desc: 'Central control center. Produces basic needs.', costStr: 'None', timeStr: '1:00', sym: 'CH', cost: { res: 0, pwr: 0, work: 0, tech: 0 }, prod: { pwr: 10, work: 10, tech: 10, mine: 5 }, time: 60 },
+            { id: 'DOME', icc: 'Dome', ugto: 'Habitation Block', kluth: 'Brood Sac', desc: 'Increases habitat space (10 Workers).', costStr: '1 Pwr, 100 Res', timeStr: '0:25', sym: 'DO', cost: { res: 100, pwr: 1, work: 0, tech: 0 }, prod: { pwr: 0, work: 10, tech: 0, mine: 0 }, time: 25 },
+            { id: 'PWR1', icc: 'Fusion Generator', ugto: 'Fission Generator', kluth: 'Biomass Burner', desc: 'Produces power (30 Power).', costStr: '1 Work, 50 Res', timeStr: '0:20', sym: 'PG', cost: { res: 50, pwr: 0, work: 1, tech: 0 }, prod: { pwr: 30, work: 0, tech: 0, mine: 0 }, time: 20 },
+            { id: 'FOOD1', icc: 'Hydro Farm', ugto: 'Agri-Tower', kluth: 'Nutrient Pool', desc: 'Produces food.', costStr: '1 Work, 1 Pwr, 50 Res', timeStr: '0:15', sym: 'HF', cost: { res: 50, pwr: 1, work: 1, tech: 0 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 15 },
+            { id: 'MINE1', icc: 'Mine', ugto: 'Strip Mine', kluth: 'Extractor Vein', desc: 'Extracts resources (5 Mining).', costStr: '1 Work, 1 Pwr, 75 Res', timeStr: '0:25', sym: 'MN', cost: { res: 75, pwr: 1, work: 1, tech: 0 }, prod: { pwr: 0, work: 0, tech: 0, mine: 5 }, time: 25 },
+            { id: 'BARRACKS', icc: 'Barracks', ugto: 'Marine Barracks', kluth: 'Spawning Pool', desc: 'Builds Standard Infantry.', costStr: '1 Work, 2 Pwr, 100 Res', timeStr: '0:30', sym: 'BR', cost: { res: 100, pwr: 2, work: 1, tech: 0 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 30 },
+            { id: 'STARPORT', icc: 'Starport', ugto: 'Orbital Tether', kluth: 'Bio-Tether', desc: 'Allows ships to trade with the planet.', costStr: '1 Work, 2 Pwr, 150 Res', timeStr: '0:45', sym: 'SP', cost: { res: 150, pwr: 2, work: 1, tech: 0 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 45 },
+            { id: 'RES1', icc: 'Research Base', ugto: 'R&D Lab', kluth: 'Synaptic Node', desc: 'Produces Tech (10 Research).', costStr: '1 Work, 3 Pwr, 700 Res', timeStr: '1:15', sym: 'RB', cost: { res: 700, pwr: 3, work: 1, tech: 0 }, prod: { pwr: 0, work: 0, tech: 10, mine: 0 }, time: 75 },
+            
+            { id: 'SENS', icc: 'Sensor Base (ECCM)', ugto: 'Sensor Array', kluth: 'Bio-Receptor', desc: 'Produces 1x ECCM Gadget.', costStr: '10 Tech, 1 Work, 5 Pwr, 250 Res', timeStr: '0:30', sym: 'SN', cost: { res: 250, pwr: 5, work: 1, tech: 10 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 30 },
+            { id: 'ASENS', icc: 'Anti-Sensor Base (ECM)', ugto: 'Jammer Base', kluth: 'Spore Jammer', desc: 'Produces 1x ECM Gadget.', costStr: '10 Tech, 1 Work, 5 Pwr, 250 Res', timeStr: '0:30', sym: 'AS', cost: { res: 250, pwr: 5, work: 1, tech: 10 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 30 },
+            { id: 'PWR2', icc: 'Solar Generator', ugto: 'Geothermal Plant', kluth: 'Solar Polyp', desc: 'Produces 20 Power.', costStr: '10 Tech, 1 Work, 200 Res', timeStr: '0:50', sym: 'SG', cost: { res: 200, pwr: 0, work: 1, tech: 10 }, prod: { pwr: 20, work: 0, tech: 0, mine: 0 }, time: 50 },
+            { id: 'DEPOT', icc: 'Depot', ugto: 'Supply Depot', kluth: 'Nectar Sac', desc: 'Generates Resources & refuels ships.', costStr: '10 Tech, 1 Work, 5 Pwr, 200 Res', timeStr: '1:00', sym: 'DP', cost: { res: 200, pwr: 5, work: 1, tech: 10 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 60 },
+            { id: 'FACT', icc: 'Factory', ugto: 'Heavy Factory', kluth: 'Gestation Sac', desc: 'Generates Production (1x Prod).', costStr: '15 Tech, 3 Work, 2 Pwr, 500 Res', timeStr: '0:50', sym: 'FC', cost: { res: 500, pwr: 2, work: 3, tech: 15 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 50 },
+            { id: 'SHIELD', icc: 'Planetary Shield Generator', ugto: 'Orbital Strike Cannon', kluth: 'Sporescreen Emitter', desc: 'FACTION SPECIAL (Defensive/Offensive/Stealth).', costStr: '20 Tech, 1 Work, 20 Pwr, 1500 Res', timeStr: '2:00', sym: 'FS', cost: { res: 1500, pwr: 20, work: 1, tech: 20 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 120 },
+            
+            { id: 'FOOD2', icc: 'Automated Hydro Farm', ugto: 'Hydroponics Tower', kluth: 'Auto Nutrient Pool', desc: 'Second Food structure.', costStr: '20 Tech, 2 Pwr, 350 Res', timeStr: '0:30', sym: 'AH', cost: { res: 350, pwr: 2, work: 0, tech: 20 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 30 },
+            { id: 'PD1', icc: 'Point Defense Base', ugto: 'Flak Battery', kluth: 'Acid Spitter', desc: 'Targets bombs and infantry pods.', costStr: '20 Tech, 1 Work, 1 Pwr, 800 Res', timeStr: '1:40', sym: 'PD', cost: { res: 800, pwr: 1, work: 1, tech: 20 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 100 },
+            { id: 'DEF1', icc: 'ICC Defense Base I', ugto: 'UGTO Defense Base I', kluth: 'K\'Luth Defense Base I', desc: 'Targets bombs, fighters, missiles, pods.', costStr: '25 Tech, 1 Work, 1 Pwr, 1000 Res', timeStr: '2:00', sym: 'D1', cost: { res: 1000, pwr: 1, work: 1, tech: 25 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 120 },
+            { id: 'MINE2', icc: 'Deep Core Mine', ugto: 'Deep Core Mine', kluth: 'Deep Vein Extractor', desc: 'Produces 9 Mining.', costStr: '30 Tech, 2 Pwr, 350 Res', timeStr: '0:50', sym: 'DM', cost: { res: 350, pwr: 2, work: 0, tech: 30 }, prod: { pwr: 0, work: 0, tech: 0, mine: 9 }, time: 50 },
+            { id: 'ASHIP1', icc: 'ICC Anti-Ship Base', ugto: 'UGTO Anti-Ship Base', kluth: 'Bio-Plasma Battery', desc: 'Attacks ships within range.', costStr: '35 Tech, 1 Work, 1 Pwr, 2000 Res', timeStr: '3:20', sym: 'A1', cost: { res: 2000, pwr: 1, work: 1, tech: 35 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 200 },
+            
+            { id: 'FOOD3', icc: 'Biosphere Condenser', ugto: 'Biosphere Condenser', kluth: 'Biosphere Assimilator', desc: 'Third Food structure.', costStr: '40 Tech, 2 Work, 5 Pwr, 1900 Res', timeStr: '1:00', sym: 'BC', cost: { res: 1900, pwr: 5, work: 2, tech: 40 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 60 },
+            { id: 'PWR3', icc: 'Quantum Generator', ugto: 'Antimatter Generator', kluth: 'Quantum Polyp', desc: 'Produces 40 Power.', costStr: '40 Tech, 3 Work, 450 Res', timeStr: '0:40', sym: 'QG', cost: { res: 450, pwr: 0, work: 3, tech: 40 }, prod: { pwr: 40, work: 0, tech: 0, mine: 0 }, time: 40 },
+            { id: 'RES2', icc: 'Subspace Network', ugto: 'Quantum Network', kluth: 'Neural Network', desc: 'Produces 15 Research.', costStr: '55 Tech, 2 Work, 6 Pwr, 1500 Res', timeStr: '1:00', sym: 'R2', cost: { res: 1500, pwr: 6, work: 2, tech: 55 }, prod: { pwr: 0, work: 0, tech: 15, mine: 0 }, time: 60 },
+            { id: 'SHIPYARD', icc: 'Shipyard', ugto: 'Shipyard', kluth: 'Leviathan Womb', desc: 'Unlocks ability to build ships.', costStr: '65 Tech, 40 Work, 75 Pwr, 20000 Res', timeStr: '4:30', sym: 'SY', cost: { res: 20000, pwr: 75, work: 40, tech: 65 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 270 },
+            { id: 'MINE3', icc: 'Mantle Extractor', ugto: 'Core Extractor', kluth: 'Mantle Vein', desc: 'Produces 12 Mining.', costStr: '70 Tech, 2 Work, 10 Pwr, 2750 Res', timeStr: '1:40', sym: 'ME', cost: { res: 2750, pwr: 10, work: 2, tech: 70 }, prod: { pwr: 0, work: 0, tech: 0, mine: 12 }, time: 100 },
+            { id: 'PD2', icc: 'Point Defense Base II', ugto: 'Flak Battery II', kluth: 'Acid Spitter II', desc: 'Provides advanced point defense.', costStr: '70 Tech, 2 Work, 6 Pwr, 1500 Res', timeStr: '4:00', sym: 'P2', cost: { res: 1500, pwr: 6, work: 2, tech: 70 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 240 },
+            { id: 'INTER', icc: 'Interdictor Base', ugto: 'Interdictor Base', kluth: 'Bio-Interdictor', desc: 'Prevents Jumpdrives near planet.', costStr: '70 Tech, 1 Work, 20 Pwr, 800 Res', timeStr: '1:40', sym: 'IB', cost: { res: 800, pwr: 20, work: 1, tech: 70 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 100 },
+            { id: 'PWR4', icc: 'Variance Generator', ugto: 'Singularity Generator', kluth: 'Variance Polyp', desc: 'Produces 50 Power.', costStr: '80 Tech, 5 Work, 1800 Res', timeStr: '1:00', sym: 'VG', cost: { res: 1800, pwr: 0, work: 5, tech: 80 }, prod: { pwr: 50, work: 0, tech: 0, mine: 0 }, time: 60 },
+            { id: 'DEF2', icc: 'ICC Defense Base II', ugto: 'UGTO Defense Base II', kluth: 'K\'Luth Defense Base II', desc: 'Advanced Defense Beam.', costStr: '80 Tech, 4 Work, 15 Pwr, 2500 Res', timeStr: '3:30', sym: 'D2', cost: { res: 2500, pwr: 15, work: 4, tech: 80 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 210 },
+            { id: 'RES3', icc: 'Cortex Nexus', ugto: 'Neural Nexus', kluth: 'Cortex Nexus', desc: 'Produces 20 Research.', costStr: '85 Tech, 3 Work, 12 Pwr, 3700 Res', timeStr: '5:00', sym: 'R3', cost: { res: 3700, pwr: 12, work: 3, tech: 85 }, prod: { pwr: 0, work: 0, tech: 20, mine: 0 }, time: 300 },
+            { id: 'ASHIP2', icc: 'ICC Anti-Ship Base II', ugto: 'UGTO Anti-Ship Base II', kluth: 'Bio-Plasma Battery II', desc: 'Advanced Anti-Ship base.', costStr: '90 Tech, 6 Work, 25 Pwr, 8000 Res', timeStr: '6:00', sym: 'A2', cost: { res: 8000, pwr: 25, work: 6, tech: 90 }, prod: { pwr: 0, work: 0, tech: 0, mine: 0 }, time: 360 }
+        ];
+
+        let FACTION_STRUCTURES = { 1: [], 2: [], 3: [] };
+        
+        RAW_BUILDINGS.forEach(b => {
+            FACTION_STRUCTURES[1].push({ id: b.id, name: b.ugto, desc: b.desc, cost: b.cost, time: b.time, sym: b.sym, prod: b.prod, costStr: b.costStr, timeStr: b.timeStr, color: '#aa3333' });
+            FACTION_STRUCTURES[2].push({ id: b.id, name: b.icc, desc: b.desc, cost: b.cost, time: b.time, sym: b.sym, prod: b.prod, costStr: b.costStr, timeStr: b.timeStr, color: '#3366aa' });
+            FACTION_STRUCTURES[3].push({ id: b.id, name: b.kluth, desc: b.desc, cost: b.cost, time: b.time, sym: b.sym, prod: b.prod, costStr: b.costStr, timeStr: b.timeStr, color: '#7733aa' });
+        });
+
+        // --- GADGET DATABASE (Now fetched dynamically from GitHub) ---
+        let GADGET_DATABASE = {};
+
+        const camera = { x: -20000, y: 18500, zoom: 0.05, targetZoom: 0.05 };
+        const keys = {}; const mouse = { x: 0, y: 0, leftDown: false, rightDown: false };
+        const worldMouse = { x: 0, y: 0 };
+        let wPressedLast = false; let sPressedLast = false;
+
+        let player; let projectiles = []; let particles = []; let celestialBodies = []; let asteroids = []; let nebulas = [];
+        let scannedTarget = null; let staticStars = [];
+        
+        // Planet View State
+        let isPlanetViewOpen = false;
+        let activePlanet = null;
+        let selectedNode = null;
+
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        
+        window.addEventListener('keydown', e => {
+            const k = e.key.toLowerCase();
+            keys[k] = true;
+            
+            if (k === 'b' && !isGameOver && player && player.canBuild) {
+                if (isPlanetViewOpen) {
+                    closePlanetView();
+                } else {
+                    let closest = null; let minDist = Infinity;
+                    for (let b of celestialBodies) {
+                        if (b.type === 'sun') continue;
+                        let dist = Math.hypot(player.x - b.x, player.y - b.y);
+                        if (dist < b.radius + 1500 && dist < minDist && b.faction.id === player.faction.id) { 
+                            closest = b; minDist = dist; 
+                        }
+                    }
+                    if (closest) openPlanetView(closest);
+                }
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        
+        window.addEventListener('mousedown', e => { 
+            if (isPlanetViewOpen) return; 
+            if (e.target.id !== 'gameCanvas') return; 
+
+            if (e.button === 0) mouse.leftDown = true; 
+            if (e.button === 2) { 
+                mouse.rightDown = true;
+                if (!isGameOver && player && player.jumpState === 'IDLE') {
+                    if (scannedTarget) {
+                        const angleFromTarget = Math.atan2(player.y - scannedTarget.y, player.x - scannedTarget.x);
+                        const safeDistance = scannedTarget.radius + player.length + 300; 
+                        const safeX = scannedTarget.x + Math.cos(angleFromTarget) * safeDistance;
+                        const safeY = scannedTarget.y + Math.sin(angleFromTarget) * safeDistance;
+                        player.navTarget = { x: safeX, y: safeY, name: scannedTarget.name + ' (ORBIT)' };
+                    } else {
+                        player.navTarget = { x: worldMouse.x, y: worldMouse.y, name: `COORD: ${Math.round(worldMouse.x)}, ${Math.round(worldMouse.y)}` };
+                    }
+                }
+            }
+        });
+        window.addEventListener('mouseup', e => { 
+            if (e.button === 0) mouse.leftDown = false; 
+            if (e.button === 2) mouse.rightDown = false;
+        });
+        window.addEventListener('wheel', e => {
+            if (isPlanetViewOpen) return;
+            camera.targetZoom *= e.deltaY > 0 ? 0.8 : 1.25;
+            camera.targetZoom = Math.max(0.005, Math.min(camera.targetZoom, 2)); 
+        });
+
+        // --- PLANET VIEW UI LOGIC ---
+
+        document.getElementById('pv-canvas').addEventListener('mousedown', e => {
+            const rect = e.target.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            selectedNode = null;
+            for (let n of activePlanet.nodes) {
+                if (Math.hypot(n.x - mx, n.y - my) < 20) { selectedNode = n; break; }
+            }
+            
+            if (selectedNode) {
+                document.getElementById('pv-build-menu').style.display = 'flex';
+                if (selectedNode.structure) {
+                    document.getElementById('pv-node-info').innerText = `NODE ${selectedNode.id}: Contains ${selectedNode.structure.name}`;
+                } else if (selectedNode.underConstruction) {
+                    document.getElementById('pv-node-info').innerText = `NODE ${selectedNode.id}: UNDER CONSTRUCTION`;
+                } else {
+                    document.getElementById('pv-node-info').innerText = `NODE ${selectedNode.id}: Sector clear for construction.`;
+                }
+            } else {
+                document.getElementById('pv-build-menu').style.display = 'none';
+                document.getElementById('pv-node-info').innerText = "Select a grid node to construct facilities.";
+            }
+            populateBuildMenu();
+            drawPlanetView();
+        });
+
+        function populateBuildMenu() {
+            const menu = document.getElementById('pv-build-menu');
+            menu.innerHTML = ''; 
+            if (!selectedNode || selectedNode.structure || selectedNode.underConstruction) return;
+            
+            const availableStructures = FACTION_STRUCTURES[player.faction.id];
+            
+            availableStructures.forEach((struct, index) => {
+                const btn = document.createElement('div');
+                
+                // EVALUATE GATES
+                let canBuild = true; let failReason = "";
+                
+                if (player.activeBuild) { canBuild = false; failReason = "ENGINEER BUSY"; }
+                else if (!activePlanet.stats.hasHub && struct.id !== 'HUB') { canBuild = false; failReason = "HUB REQ"; }
+                else if (activePlanet.stats.hasHub && struct.id === 'HUB') { canBuild = false; failReason = "MAX HUB REACHED"; }
+                else if (activePlanet.stats.tech < struct.cost.tech) { canBuild = false; failReason = `REQ TECH ${struct.cost.tech}`; }
+                else if (activePlanet.stats.res < struct.cost.res) { canBuild = false; failReason = "LOW RES"; }
+                else if ((activePlanet.stats.pwrTotal - activePlanet.stats.pwrUsed) < struct.cost.pwr) { canBuild = false; failReason = "LOW PWR"; }
+                else if ((activePlanet.stats.workTotal - activePlanet.stats.workUsed) < struct.cost.work) { canBuild = false; failReason = "LOW WRKS"; }
+
+                btn.className = canBuild ? 'build-item' : 'build-item disabled';
+                if (struct.id === 'SHIELD') {
+                    btn.style.borderColor = player.faction.color;
+                    btn.style.background = `rgba(${player.faction.id===1?'255,0,0':player.faction.id===2?'0,255,255':'170,50,255'}, 0.2)`;
+                }
+                
+                let failHtml = canBuild ? '' : `<div class="build-fail-msg">${failReason}</div>`;
+                
+                btn.innerHTML = `
+                    ${failHtml}
+                    <div class="build-title">${struct.name}</div>
+                    <div class="build-desc">${struct.desc}</div>
+                    <div class="build-stats">Cost: ${struct.costStr} | Time: ${struct.timeStr}</div>
+                `;
+                
+                if (canBuild) {
+                    btn.onclick = () => buildStructure(index);
+                }
+                menu.appendChild(btn);
+            });
+        }
+
+        function updatePlanetStatsUI() {
+            if(!activePlanet) return;
+            document.getElementById('pv-res').innerText = `${Math.floor(activePlanet.stats.res)} (+${activePlanet.stats.mineRate}/s)`;
+            document.getElementById('pv-tech').innerText = activePlanet.stats.tech;
+            
+            const pwrEl = document.getElementById('pv-pwr');
+            pwrEl.innerText = `${activePlanet.stats.pwrUsed} / ${activePlanet.stats.pwrTotal}`;
+            pwrEl.style.color = activePlanet.stats.pwrUsed >= activePlanet.stats.pwrTotal ? '#ff3333' : '#ffaa00';
+            
+            const wrkEl = document.getElementById('pv-work');
+            wrkEl.innerText = `${activePlanet.stats.workUsed} / ${activePlanet.stats.workTotal}`;
+            wrkEl.style.color = activePlanet.stats.workUsed >= activePlanet.stats.workTotal ? '#ff3333' : '#aaffaa';
+        }
+
+        function openPlanetView(planet) {
+            isPlanetViewOpen = true; activePlanet = planet; selectedNode = null;
+            document.getElementById('planet-view').style.display = 'block';
+            document.getElementById('pv-title').innerText = `${planet.name.toUpperCase()} - SURFACE GRID`;
+            document.getElementById('pv-title').style.color = planet.faction.color;
+            document.getElementById('pv-build-menu').style.display = 'none';
+            document.getElementById('pv-node-info').innerText = "Select a grid node to construct facilities.";
+            
+            updatePlanetStatsUI();
+            populateBuildMenu();
+            drawPlanetView();
+        }
+
+        function closePlanetView() {
+            isPlanetViewOpen = false; activePlanet = null;
+            document.getElementById('planet-view').style.display = 'none';
+        }
+
+        function buildStructure(structIndex) {
+            if (!selectedNode || !activePlanet || player.activeBuild) return;
+            const struct = FACTION_STRUCTURES[player.faction.id][structIndex];
+            
+            // Deduct initial cost
+            activePlanet.stats.res -= struct.cost.res;
+            
+            // Reserve Engineer Bay
+            selectedNode.underConstruction = true;
+            player.activeBuild = {
+                targetNode: selectedNode,
+                planet: activePlanet,
+                struct: struct,
+                timeRemaining: struct.time * 60,
+                totalTime: struct.time * 60
+            };
+            
+            document.getElementById('pv-node-info').innerText = `NODE ${selectedNode.id}: Constructing ${struct.name}...`;
+            updatePlanetStatsUI();
+            populateBuildMenu();
+            drawPlanetView();
+        }
+
+        function drawPlanetView() {
+            const pCanvas = document.getElementById('pv-canvas');
+            const pctx = pCanvas.getContext('2d');
+            
+            let grad = pctx.createLinearGradient(0,0, 800, 400);
+            grad.addColorStop(0, activePlanet.colors.base);
+            grad.addColorStop(1, '#001122');
+            pctx.fillStyle = grad; pctx.fillRect(0,0,800,400);
+
+            pctx.strokeStyle = 'rgba(255,255,255,0.05)'; pctx.beginPath();
+            for(let x=0; x<800; x+=40) { pctx.moveTo(x,0); pctx.lineTo(x,400); }
+            for(let y=0; y<400; y+=40) { pctx.moveTo(0,y); pctx.lineTo(800,y); }
+            pctx.stroke();
+
+            for (let n of activePlanet.nodes) {
+                pctx.beginPath(); pctx.arc(n.x, n.y, 15, 0, Math.PI*2);
+                
+                if (n === selectedNode) { pctx.strokeStyle = '#ffffff'; pctx.lineWidth = 3; pctx.stroke(); }
+                else { pctx.strokeStyle = '#00ffff'; pctx.lineWidth = 1; pctx.stroke(); }
+
+                if (n.structure) {
+                    pctx.fillStyle = n.structure.color;
+                    pctx.fillRect(n.x-10, n.y-10, 20, 20);
+                    pctx.fillStyle = '#fff'; pctx.font = 'bold 11px Courier'; pctx.textAlign = 'center'; pctx.textBaseline = 'middle';
+                    pctx.fillText(n.structure.sym, n.x, n.y);
+                } else if (n.underConstruction) {
+                    pctx.fillStyle = 'rgba(255, 170, 0, 0.5)'; pctx.fill();
+                    if (player && player.activeBuild && player.activeBuild.targetNode === n) {
+                        let pct = 1 - (player.activeBuild.timeRemaining / player.activeBuild.totalTime);
+                        pctx.beginPath(); pctx.moveTo(n.x, n.y);
+                        pctx.arc(n.x, n.y, 15, -Math.PI/2, (-Math.PI/2) + (Math.PI*2*pct));
+                        pctx.fillStyle = '#ffaa00'; pctx.fill();
+                    }
+                } else {
+                    pctx.fillStyle = 'rgba(0, 255, 255, 0.2)'; pctx.fill();
+                }
+            }
+        }
+
+        // --- CORE ENVIRONMENT ---
+
+        function isVisible(x, y, radius) {
+            const vW = width / camera.zoom; const vH = height / camera.zoom;
+            return (x + radius > camera.x - vW/2 && x - radius < camera.x + vW/2 && y + radius > camera.y - vH/2 && y - radius < camera.y + vH/2);
+        }
+
+        class Nebula {
+            constructor(x, y, radius, colorStops) { this.x = x; this.y = y; this.radius = radius; this.colorStops = colorStops; }
+            draw(ctx) {
+                if (!isVisible(this.x, this.y, this.radius)) return;
+                if (camera.zoom < 0.02) { 
+                    ctx.fillStyle = this.colorStops[0][1]; ctx.globalAlpha = 0.3;
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1.0; return;
+                }
+                let grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                this.colorStops.forEach(s => grad.addColorStop(s[0], s[1]));
+                ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.globalCompositeOperation = 'source-over';
+            }
+        }
+
+        class Asteroid {
+            constructor(x, y, radius) {
+                this.x = x; this.y = y; this.radius = radius; this.angle = Math.random() * Math.PI * 2;
+                this.rotSpeed = (Math.random() - 0.5) * 0.01;
+                const dist = Math.hypot(this.x, this.y); const a = Math.atan2(this.y, this.x);
+                const orbitSpeed = 1500 / dist; 
+                this.vx = Math.cos(a + Math.PI/2) * orbitSpeed; this.vy = Math.sin(a + Math.PI/2) * orbitSpeed;
+                this.vertices = []; const points = 6 + Math.floor(Math.random() * 4);
+                for(let i=0; i<points; i++) {
+                    const ang = (i / points) * Math.PI * 2; const r = this.radius * (0.7 + Math.random() * 0.3);
+                    this.vertices.push({x: Math.cos(ang)*r, y: Math.sin(ang)*r});
+                }
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.angle += this.rotSpeed; }
+            draw(ctx) {
+                if (!isVisible(this.x, this.y, this.radius)) return;
+                if (camera.zoom < 0.05) { ctx.fillStyle = '#555'; ctx.fillRect(this.x-this.radius, this.y-this.radius, this.radius*2, this.radius*2); return; }
+                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+                ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = '#444'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+                for(let i=1; i<this.vertices.length; i++) ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
+                ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+            }
+        }
+
+        class CelestialBody {
+            constructor(x, y, radius, type, colors, name, faction, parent = null) {
+                this.x = x; this.y = y; this.radius = radius; 
+                this.type = type; this.colors = colors; this.name = name; this.faction = faction; this.parent = parent; 
+                
+                // Planetary Economy
+                this.stats = {
+                    res: 500, // Baseline starting resources
+                    tech: 0,
+                    pwrTotal: 0, pwrUsed: 0,
+                    workTotal: 0, workUsed: 0,
+                    mineRate: 0,
+                    hasHub: false
+                };
+                
+                this.nodes = [];
+                if (this.type !== 'sun') {
+                    for (let i = 0; i < 32; i++) { this.nodes.push({ id: i, x: 40 + Math.random() * 720, y: 40 + Math.random() * 320, structure: null, underConstruction: false }); }
+                    for (let step = 0; step < 20; step++) {
+                        for (let i = 0; i < 32; i++) {
+                            for (let j = i + 1; j < 32; j++) {
+                                let dx = this.nodes[i].x - this.nodes[j].x; let dy = this.nodes[i].y - this.nodes[j].y; let dist = Math.hypot(dx, dy);
+                                if (dist < 60) {
+                                    this.nodes[i].x += dx * 0.1; this.nodes[i].y += dy * 0.1;
+                                    this.nodes[j].x -= dx * 0.1; this.nodes[j].y -= dy * 0.1;
+                                }
+                            }
+                            this.nodes[i].x = Math.max(20, Math.min(780, this.nodes[i].x)); this.nodes[i].y = Math.max(20, Math.min(380, this.nodes[i].y));
+                        }
+                    }
+                }
+
+                // Render caching
+                this.canvas = document.createElement('canvas'); this.pad = radius * 1.5; 
+                const MAX_TEX_SIZE = 800; let rawSize = (radius + this.pad) * 2;
+                this.renderScale = rawSize > MAX_TEX_SIZE ? MAX_TEX_SIZE / rawSize : 1;
+                this.canvas.width = rawSize * this.renderScale; this.canvas.height = rawSize * this.renderScale;
+                this.generateTexture();
+            }
+            
+            recalculateStats() {
+                this.stats.tech = 0;
+                this.stats.pwrTotal = 0; this.stats.pwrUsed = 0;
+                this.stats.workTotal = 0; this.stats.workUsed = 0;
+                this.stats.mineRate = 0;
+                this.stats.hasHub = false;
+
+                for (let n of this.nodes) {
+                    if (n.structure && !n.underConstruction) {
+                        if (n.structure.id === 'HUB') this.stats.hasHub = true;
+                        
+                        // Add produced stats
+                        this.stats.pwrTotal += n.structure.prod.pwr;
+                        this.stats.workTotal += n.structure.prod.work;
+                        this.stats.tech += n.structure.prod.tech;
+                        this.stats.mineRate += n.structure.prod.mine;
+                        
+                        // Subtract continuous operating costs
+                        this.stats.pwrUsed += n.structure.cost.pwr;
+                        this.stats.workUsed += n.structure.cost.work;
+                    }
+                }
+            }
+
+            generateTexture() {
+                const octx = this.canvas.getContext('2d'); octx.scale(this.renderScale, this.renderScale);
+                const cx = (this.radius + this.pad); const cy = (this.radius + this.pad); const r = this.radius;
+
+                let glowSize = this.type === 'sun' ? r * 2.2 : r * 1.3;
+                let glowGrad = octx.createRadialGradient(cx, cy, r*0.8, cx, cy, glowSize);
+                glowGrad.addColorStop(0, this.type === 'sun' ? this.colors.base : this.faction.color); glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                octx.fillStyle = glowGrad; octx.beginPath(); octx.arc(cx, cy, glowSize, 0, Math.PI*2); octx.fill();
+
+                octx.save(); octx.beginPath(); octx.arc(cx, cy, r, 0, Math.PI * 2); octx.clip();
+                if (this.type === 'sun') { octx.fillStyle = '#ffffff'; octx.fill(); } 
+                else if (this.type === 'gas') {
+                    let grad = octx.createLinearGradient(cx, cy-r, cx, cy+r);
+                    for(let i=0; i<=1; i+=0.1) grad.addColorStop(i, Math.random() > 0.5 ? this.colors.base : this.colors.stripe); octx.fillStyle = grad; octx.fill();
+                } else if (this.type === 'terrestrial') {
+                    octx.fillStyle = this.colors.base; octx.fill(); octx.fillStyle = this.colors.land; 
+                    for(let i=0; i<20; i++) { octx.beginPath(); octx.arc(cx+(Math.random()-0.5)*r*1.5, cy+(Math.random()-0.5)*r*1.5, r*0.2+Math.random()*r*0.4, 0, Math.PI*2); octx.fill(); }
+                } else if (this.type === 'barren') {
+                    octx.fillStyle = this.colors.base; octx.fill();
+                    for(let i=0; i<30; i++) {
+                        let crX = cx+(Math.random()-0.5)*r*1.8; let crY = cy+(Math.random()-0.5)*r*1.8; let crR = Math.random()*r*0.2 + 5;
+                        octx.fillStyle = 'rgba(0,0,0,0.4)'; octx.beginPath(); octx.arc(crX, crY, crR, 0, Math.PI*2); octx.fill();
+                        octx.fillStyle = this.colors.base; octx.beginPath(); octx.arc(crX-crR*0.2, crY-crR*0.2, crR*0.9, 0, Math.PI*2); octx.fill();
+                    }
+                } else if (this.type === 'bio') {
+                    octx.fillStyle = this.colors.base; octx.fill(); octx.strokeStyle = this.colors.vein; octx.lineWidth = 4;
+                    for(let i=0; i<10; i++) {
+                        octx.beginPath(); octx.moveTo(cx+(Math.random()-0.5)*r*2, cy+(Math.random()-0.5)*r*2);
+                        octx.bezierCurveTo(cx+(Math.random()-0.5)*r*2, cy+(Math.random()-0.5)*r*2, cx+(Math.random()-0.5)*r*2, cy+(Math.random()-0.5)*r*2, cx+(Math.random()-0.5)*r*2, cy+(Math.random()-0.5)*r*2); octx.stroke();
+                    }
+                }
+                if (this.type !== 'sun') {
+                    let shadow = octx.createRadialGradient(cx - r*0.3, cy - r*0.3, r*0.1, cx, cy, r);
+                    shadow.addColorStop(0, 'rgba(255,255,255,0.1)'); shadow.addColorStop(1, 'rgba(0,0,0,0.85)');
+                    octx.fillStyle = shadow; octx.fillRect(0, 0, cx*2, cy*2);
+                }
+                octx.restore();
+                if (this.colors.ring) { octx.beginPath(); octx.ellipse(cx, cy, r*2.2, r*0.8, Math.PI/6, 0, Math.PI*2); octx.strokeStyle = this.colors.ring; octx.lineWidth = r*0.3; octx.stroke(); }
+            }
+
+            draw(ctx) {
+                const pX = this.parent ? this.parent.x : 0; const pY = this.parent ? this.parent.y : 0;
+                const dist = Math.hypot(this.x - pX, this.y - pY);
+                const visualRadius = Math.max(this.radius + this.pad, dist);
+                const cullX = dist > 0 ? pX : this.x; const cullY = dist > 0 ? pY : this.y;
+                if (!isVisible(cullX, cullY, visualRadius)) return; 
+
+                if (dist > 0 && this.type !== 'sun') {
+                    ctx.beginPath(); ctx.arc(pX, pY, dist, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = camera.zoom < 0.05 ? 40 : 10; ctx.stroke();
+                }
+                const targetSize = (this.radius + this.pad) * 2;
+                ctx.drawImage(this.canvas, this.x - this.radius - this.pad, this.y - this.radius - this.pad, targetSize, targetSize);
+                if (camera.zoom < 0.2) {
+                    ctx.fillStyle = this.faction.color; ctx.font = `bold ${Math.max(30, 16 / camera.zoom)}px Courier New`; ctx.textAlign = 'center';
+                    let tag = this.faction.id !== 0 ? `[${this.faction.name}] ` : ''; ctx.fillText(tag + this.name, this.x, this.y - this.radius - (40/camera.zoom));
+                }
+            }
+        }
+
+        // --- SHIP CLASSES & MODULAR GADGET SYSTEM ---
+
+        class Gadget {
+            constructor(parent, config, mountData) {
+                this.parent = parent;
+                this.config = config;
+                this.id = config.id;
+                this.name = config.name;
+                this.type = config.type;
+                this.energyCost = config.energyCost;
+                this.cooldown = config.cooldown;
+                this.lastFired = 0;
+                
+                // Mount specific data (Position on hull, firing arcs)
+                this.offX = mountData.offX || 0;
+                this.offY = mountData.offY || 0;
+                this.baseAngle = mountData.baseAngle || 0;
+                this.arcRange = mountData.arcRange || Math.PI*2;
+                this.currentAngle = this.baseAngle;
+            }
+            
+            getCooldownPct() {
+                let elapsed = Date.now() - this.lastFired;
+                return Math.min(1.0, elapsed / this.cooldown);
+            }
+            
+            isReady() { return this.getCooldownPct() >= 1.0; }
+            hasEnergy() { return this.parent.energy >= this.energyCost; }
+            
+            update() {} // Overridden by subclasses
+            draw(ctx) {} // Overridden by subclasses
+        }
+
+        class ConstructorGadget extends Gadget {
+            constructor(parent, config, mountData) { super(parent, config, mountData); }
+            // Construction logic is currently tied to Planet View UI, 
+            // but we register the gadget so it appears on the HUD and grants abilities.
+        }
+
+        class WeaponGadget extends Gadget {
+            constructor(parent, config, mountData) {
+                super(parent, config, mountData);
+                this.damage = config.damage || 25;
+                this.projSpeed = config.projSpeed || 30;
+                this.size = config.size || 5;
+                this.color = config.color || '#ffaa00';
+                
+                // Darkspace sometimes defines range in small grid units (e.g. range: 4).
+                // We scale tiny ranges up by 100 so they function correctly in our large canvas space!
+                this.range = (config.range !== undefined && config.range < 50) ? config.range * 100 : (config.range || 1000);
+                
+                this.turnSpeed = 0.05;
+            }
+
+            update(targetX, targetY, isTriggerPulled) {
+                // Calculate absolute world position of the mount
+                const wx = this.parent.x + Math.cos(this.parent.angle)*this.offX - Math.sin(this.parent.angle)*this.offY;
+                const wy = this.parent.y + Math.sin(this.parent.angle)*this.offX + Math.cos(this.parent.angle)*this.offY;
+                
+                // Target Tracking Logic
+                let tRel = Math.atan2(targetY - wy, targetX - wx) - this.parent.angle;
+                while(tRel > Math.PI) tRel -= Math.PI*2; while(tRel < -Math.PI) tRel += Math.PI*2;
+                
+                let aDiff = tRel - this.baseAngle; 
+                while(aDiff > Math.PI) aDiff -= Math.PI*2; while(aDiff < -Math.PI) aDiff += Math.PI*2;
+                
+                // Check if target is in arc
+                let inArc = Math.abs(aDiff) <= this.arcRange/2;
+                let desired = inArc ? tRel : this.baseAngle;
+                
+                let diff = desired - this.currentAngle; 
+                while(diff > Math.PI) diff -= Math.PI*2; while(diff < -Math.PI) diff += Math.PI*2;
+
+                if (Math.abs(diff) > this.turnSpeed) this.currentAngle += Math.sign(diff) * this.turnSpeed; 
+                else this.currentAngle = desired;
+
+                // Fire Logic
+                let distToTarget = Math.hypot(targetX - wx, targetY - wy);
+                if (isTriggerPulled && inArc && Math.abs(diff) < 0.1 && distToTarget <= this.range) {
+                    if (this.isReady() && this.hasEnergy()) {
+                        this.parent.energy -= this.energyCost;
+                        this.fire(wx, wy, this.parent.angle + this.currentAngle);
+                    }
+                }
+            }
+
+            fire(wx, wy, angle) {
+                this.lastFired = Date.now();
+                projectiles.push(new Projectile(
+                    wx + Math.cos(angle)*this.size*1.5, 
+                    wy + Math.sin(angle)*this.size*1.5, 
+                    angle, true, this.color, this.damage, this.projSpeed
+                ));
+            }
+
+            draw(ctx) {
+                if (camera.zoom < 0.1) return; 
+                const wx = this.parent.x + Math.cos(this.parent.angle)*this.offX - Math.sin(this.parent.angle)*this.offY;
+                const wy = this.parent.y + Math.sin(this.parent.angle)*this.offX + Math.cos(this.parent.angle)*this.offY;
+                ctx.save(); ctx.translate(wx, wy); ctx.rotate(this.parent.angle + this.currentAngle);
+                
+                // Gadget Sprite rendering
+                ctx.fillStyle = '#222'; ctx.strokeStyle = this.color; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, 0, this.size, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = this.color; ctx.fillRect(0, -this.size*0.3, this.size*1.8, this.size*0.6); 
+                ctx.restore();
+            }
+        }
+
+        class Ship {
+            constructor(startX, startY, shipKey, factionId) {
+                this.x = startX; this.y = startY; this.angle = -Math.PI / 2; 
+                this.faction = Object.values(FACTIONS).find(f => f.id === factionId);
+                
+                this.telegraph = 0; this.maxTelegraph = 3; this.currentSpeed = 0; 
+                this.jumpState = 'IDLE'; this.jumpTimer = 0; this.navTarget = null;
+                this.activeBuild = null; 
+                this.gadgets = []; 
+
+                let template = SHIP_DATABASE[shipKey];
+                
+                if (!template) {
+                    console.error(`Ship template ${shipKey} not found!`);
+                    return;
+                }
+                
+                this.type = template.type; // e.g. "CRUISER"
+                this.name = `${this.faction.name} ${template.name}`;
+                this.length = template.length; this.width = template.width; this.radius = template.radius; 
+                this.acceleration = template.acceleration; this.maxSpeed = template.maxSpeed; 
+                this.rudder = 0; this.rudderSpeed = template.rudderSpeed; this.maxTurnRate = template.maxTurnRate; 
+                
+                this.maxHealth = template.maxHealth; this.health = this.maxHealth; 
+                this.maxEnergy = template.maxEnergy; this.energy = this.maxEnergy; this.energyRegen = template.energyRegen;
+                this.maxFuel = template.maxFuel; this.fuel = this.maxFuel; this.jumpCost = template.jumpCost; 
+                this.jumpSpeed = template.jumpSpeed; this.jumpSpoolTime = template.jumpSpoolTime; this.jumpCooldownTime = template.jumpCooldownTime;
+
+                // Dynamically mount gadgets from the JSON-parsed template!
+                template.mounts.forEach(mount => {
+                    const gadgetData = GADGET_DATABASE[mount.gadget];
+                    if (gadgetData) {
+                        if (gadgetData.type === 'CONSTRUCTOR') {
+                            this.gadgets.push(new ConstructorGadget(this, gadgetData, mount));
+                        } else if (gadgetData.type === 'WEAPON') {
+                            this.gadgets.push(new WeaponGadget(this, gadgetData, mount));
+                        } else {
+                            this.gadgets.push(new Gadget(this, gadgetData, mount));
+                        }
+                    }
+                });
+            }
+
+            // Dynamic check for build abilities
+            get canBuild() {
+                return this.gadgets.some(g => g.type === 'CONSTRUCTOR');
+            }
+
+            update() {
+                if (this.activeBuild) {
+                    this.activeBuild.timeRemaining--;
+                    if (this.activeBuild.timeRemaining <= 0) {
+                        this.activeBuild.targetNode.underConstruction = false;
+                        this.activeBuild.targetNode.structure = this.activeBuild.struct;
+                        this.activeBuild.planet.recalculateStats();
+                        
+                        if (isPlanetViewOpen && activePlanet === this.activeBuild.planet) {
+                            populateBuildMenu();
+                            updatePlanetStatsUI();
+                            drawPlanetView();
+                        }
+                        this.activeBuild = null;
+                    }
+                }
+
+                if (this.jumpState === 'SPOOLING') {
+                    this.telegraph = 0; this.currentSpeed *= 0.95; 
+                    let targetAngle = Math.atan2(this.navTarget.y - this.y, this.navTarget.x - this.x);
+                    let angleDiff = targetAngle - this.angle;
+                    while(angleDiff > Math.PI) angleDiff -= Math.PI*2; while(angleDiff < -Math.PI) angleDiff += Math.PI*2;
+                    this.angle += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), this.maxTurnRate * 2);
+
+                    if (Math.random() < 0.5) {
+                        const dist = 100 + Math.random() * 200; const ang = Math.random() * Math.PI * 2;
+                        particles.push(new Particle(this.x + Math.cos(ang) * dist, this.y + Math.sin(ang) * dist, -Math.cos(ang) * 5, -Math.sin(ang) * 5, '#00ffff', 3, 0.05));
+                    }
+
+                    this.jumpTimer--;
+                    if (this.jumpTimer <= 0 && Math.abs(angleDiff) < 0.05) {
+                        this.jumpState = 'JUMPING'; const dist = Math.hypot(this.navTarget.x - this.x, this.navTarget.y - this.y);
+                        this.jumpTimer = dist / this.jumpSpeed; createExplosion(this.x, this.y, '#ffffff', 5);
+                    }
+                } 
+                else if (this.jumpState === 'JUMPING') {
+                    let targetAngle = Math.atan2(this.navTarget.y - this.y, this.navTarget.x - this.x);
+                    this.angle = targetAngle; this.x += Math.cos(this.angle) * this.jumpSpeed; this.y += Math.sin(this.angle) * this.jumpSpeed;
+                    particles.push(new Particle(this.x, this.y, 0, 0, '#ffffff', 5, 0.1));
+
+                    this.jumpTimer--; const dist = Math.hypot(this.navTarget.x - this.x, this.navTarget.y - this.y);
+                    if (dist < this.jumpSpeed || this.jumpTimer <= 0) {
+                        this.jumpState = 'COOLDOWN'; this.jumpTimer = this.jumpCooldownTime; this.currentSpeed = 0; createExplosion(this.x, this.y, '#00ffff', 5);
+                    }
+                } 
+                else {
+                    if (this.jumpState === 'COOLDOWN') { this.jumpTimer--; if (this.jumpTimer <= 0) this.jumpState = 'IDLE'; }
+
+                    if (keys['j'] && this.navTarget && this.jumpState === 'IDLE' && this.fuel >= this.jumpCost) {
+                        this.jumpState = 'SPOOLING'; this.jumpTimer = this.jumpSpoolTime; this.fuel -= this.jumpCost;
+                    }
+
+                    if (!isPlanetViewOpen) {
+                        if (keys['w'] && !wPressedLast) this.telegraph = Math.min(this.maxTelegraph, this.telegraph + 1);
+                        if (keys['s'] && !sPressedLast) this.telegraph = Math.max(-1, this.telegraph - 1);
+                        wPressedLast = keys['w']; sPressedLast = keys['s'];
+
+                        if (keys['a']) this.rudder = Math.max(-1, this.rudder - this.rudderSpeed);
+                        else if (keys['d']) this.rudder = Math.min(1, this.rudder + this.rudderSpeed);
+                        else this.rudder *= 0.95; 
+                    }
+
+                    let target = this.telegraph > 0 ? (this.telegraph / this.maxTelegraph) * this.maxSpeed : (this.telegraph === -1 ? -this.maxSpeed * 0.3 : 0);
+                    if (this.currentSpeed < target) this.currentSpeed += this.acceleration;
+                    if (this.currentSpeed > target) this.currentSpeed -= this.acceleration;
+
+                    let tp = Math.abs(this.currentSpeed)/this.maxSpeed; if(this.currentSpeed<0) tp*=-1; if(Math.abs(this.currentSpeed)<0.1) tp=0.1; 
+                    this.angle += this.rudder * this.maxTurnRate * tp;
+                    this.x += Math.cos(this.angle) * this.currentSpeed; this.y += Math.sin(this.angle) * this.currentSpeed;
+
+                    if (this.energy < this.maxEnergy) this.energy += this.energyRegen;
+                    
+                    let isNearFriendly = false;
+                    for (let b of celestialBodies) {
+                        if (b.faction === this.faction && Math.hypot(this.x - b.x, this.y - b.y) < b.radius + 1200) { isNearFriendly = true; break; }
+                    }
+                    if (isNearFriendly && this.fuel < this.maxFuel && this.jumpState === 'IDLE') {
+                        this.fuel += 2; if (this.fuel > this.maxFuel) this.fuel = this.maxFuel;
+                    }
+
+                    if (!isPlanetViewOpen) {
+                        this.gadgets.forEach(g => {
+                            if (g.type === 'WEAPON') g.update(worldMouse.x, worldMouse.y, mouse.leftDown);
+                        });
+                    }
+                }
+            }
+            draw(ctx) {
+                if (this.jumpState === 'JUMPING') {
+                    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.ellipse(0, 0, this.length * 1.5, this.width / 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return;
+                }
+
+                if (camera.zoom < 0.05) {
+                    ctx.fillStyle = this.faction.color; ctx.beginPath(); ctx.moveTo(this.x + Math.cos(this.angle)*400, this.y + Math.sin(this.angle)*400);
+                    ctx.lineTo(this.x + Math.cos(this.angle+2.5)*250, this.y + Math.sin(this.angle+2.5)*250);
+                    ctx.lineTo(this.x + Math.cos(this.angle-2.5)*250, this.y + Math.sin(this.angle-2.5)*250); ctx.closePath(); ctx.fill(); return;
+                }
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                let L = this.length; let W = this.width;
+
+                // Draw Engine Exhaust Glow
+                if (this.currentSpeed > 0.1) {
+                    let thrust = (this.currentSpeed / this.maxSpeed) * (L * 0.5);
+                    let grad = ctx.createRadialGradient(-L/2, 0, 0, -L/2, 0, thrust);
+                    
+                    if (this.faction.id === 1) { // UGTO Orange
+                        grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.2, '#ffaa00'); grad.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                    } else if (this.faction.id === 2) { // ICC Blue
+                        grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.2, '#00ffff'); grad.addColorStop(1, 'rgba(0, 50, 255, 0)');
+                    } else { // K'luth Green
+                        grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.2, '#55ff55'); grad.addColorStop(1, 'rgba(0, 255, 0, 0)');
+                    }
+                    
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    if (this.faction.id === 2 && this.type === 'DREADNOUGHT') {
+                        ctx.ellipse(-L*0.4, -W*0.35, thrust, W*0.15, 0, 0, Math.PI*2);
+                        ctx.ellipse(-L*0.4, W*0.35, thrust, W*0.15, 0, 0, Math.PI*2);
+                    } else {
+                        ctx.ellipse(-L/2 - thrust/2, 0, thrust, W*0.3, 0, 0, Math.PI*2);
+                    }
+                    ctx.fill();
+                }
+
+                // --- SPRITE MANAGER RENDERING ---
+                let prefix = this.faction.id === 1 ? 'UGTO' : this.faction.id === 2 ? 'ICC' : 'KLUTH';
+                let key = `${prefix}_${this.type}`;
+                
+                if (SPRITE_CONFIG.CACHED_CANVASES[key]) {
+                    // Critical: turn off image smoothing so it stays crisp when scaled up
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(SPRITE_CONFIG.CACHED_CANVASES[key], -L/2, -W/2, L, W);
+                    ctx.imageSmoothingEnabled = true;
+                }
+
+                ctx.restore();
+                
+                // Draw active gadgets
+                this.gadgets.forEach(g => {
+                    if (g.type === 'WEAPON') g.draw(ctx);
+                });
+            }
+        }
+
+        class Projectile {
+            constructor(x, y, angle, isP, color, dmg, speed = 22) {
+                this.x = x; this.y = y; this.angle = angle; this.isP = isP; this.color = color; this.damage = dmg;
+                this.speed = speed; this.vx = Math.cos(angle)*this.speed; this.vy = Math.sin(angle)*this.speed; this.life = 250; 
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life--; }
+            draw(ctx) {
+                if (camera.zoom < 0.05) return; 
+                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+                ctx.strokeStyle = this.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-25, 0); ctx.stroke(); ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, vx, vy, color, size = 2, decay = 0.03) { this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.color=color; this.alpha=1; this.decay=decay; this.size=size; }
+            update() { this.x+=this.vx; this.y+=this.vy; this.alpha-=this.decay; }
+            draw(ctx) {
+                if (!isVisible(this.x, this.y, this.size*15)) return; 
+                if (camera.zoom < 0.05 && this.color !== '#ff3333' && this.color !== '#888888') return; 
+                ctx.globalAlpha = Math.max(0, this.alpha); ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, camera.zoom<0.05?this.size*20:this.size, camera.zoom<0.05?this.size*20:this.size); ctx.globalAlpha = 1;
+            }
+        }
+
+        function createExplosion(x, y, color, scale = 1) {
+            for (let i = 0; i < 20 * scale; i++) {
+                const a = Math.random() * Math.PI * 2; const s = (Math.random() * 3 + 1) * scale;
+                particles.push(new Particle(x, y, Math.cos(a)*s, Math.sin(a)*s, color, Math.random()*3*scale, Math.random()*0.04+0.02));
+            }
+        }
+
+        function checkCollisions() {
+            if (player && player.jumpState === 'JUMPING') return;
+            if (isGameOver) return;
+
+            for (let b = 0; b < celestialBodies.length; b++) {
+                const body = celestialBodies[b];
+                if (Math.abs(player.x - body.x) > body.radius + 150 || Math.abs(player.y - body.y) > body.radius + 150) continue;
+                if (Math.hypot(player.x - body.x, player.y - body.y) < (player.length * 0.3) + body.radius) {
+                    player.health = 0; createExplosion(player.x, player.y, '#ff3333', 5); isGameOver = true;
+                    if(isPlanetViewOpen) closePlanetView();
+                    document.getElementById('deploy-menu').style.display = 'block'; 
+                    document.getElementById('deploy-msg').innerText = "Vessel destroyed. Select a new hull class to deploy.";
+                    return; 
+                }
+            }
+            
+            for (let a = asteroids.length - 1; a >= 0; a--) {
+                const ast = asteroids[a];
+                if (Math.abs(player.x - ast.x) > ast.radius + 150 || Math.abs(player.y - ast.y) > ast.radius + 150) continue;
+                if (Math.hypot(player.x - ast.x, player.y - ast.y) < (player.length * 0.3) + ast.radius) {
+                    player.health -= ast.radius * 2; createExplosion(ast.x, ast.y, '#888888', ast.radius / 15); asteroids.splice(a, 1);
+                    if (player.health <= 0) {
+                        createExplosion(player.x, player.y, '#ff3333', 4); isGameOver = true;
+                        if(isPlanetViewOpen) closePlanetView();
+                        document.getElementById('deploy-menu').style.display = 'block'; 
+                        document.getElementById('deploy-msg').innerText = "Vessel destroyed. Select a new hull class to deploy.";
+                        return;
+                    }
+                }
+            }
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i]; let hit = false;
+                for (let a = 0; a < asteroids.length; a++) {
+                    const ast = asteroids[a];
+                    if (Math.abs(p.x - ast.x) > ast.radius + 20) continue;
+                    if (Math.hypot(p.x - ast.x, p.y - ast.y) < ast.radius) { hit = true; createExplosion(p.x, p.y, '#888888', 0.5); break; }
+                }
+                if (hit) projectiles.splice(i, 1);
+            }
+        }
+
+        // Procedural Icon Generator
+        function getGadgetIcon(type, name) {
+            let n = name.toUpperCase();
+            if (n.includes('MISSILE') || n.includes('TORPEDO')) return `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 2 L16 8 L16 18 L12 22 L8 18 L8 8 Z" fill="none" stroke="#ffaa00" stroke-width="2"/><path d="M8 18 L4 22 L12 22 Z" fill="#ffaa00"/></svg>`;
+            if (n.includes('BEAM')) return `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M4 20 L20 4" stroke="#ff4444" stroke-width="4"/><circle cx="20" cy="4" r="3" fill="#ffffff"/></svg>`;
+            if (n.includes('CANNON') || n.includes('GUN') || n.includes('DRIVER')) return `<svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="12" r="8" stroke="#ff4444" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="3" fill="#ff4444"/></svg>`;
+            if (n.includes('SHIELD')) return `<svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="12" r="10" stroke="#44aaff" stroke-width="2" fill="none" stroke-dasharray="4 2"/></svg>`;
+            if (n.includes('ARMOR')) return `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M4 4 L20 4 L20 12 C20 18 12 22 12 22 C12 22 4 18 4 12 Z" fill="none" stroke="#666666" stroke-width="2"/><path d="M4 4 L12 12 L20 4" stroke="#666666" stroke-width="2" fill="none"/></svg>`;
+            if (n.includes('DRIVE') || n.includes('TACHYON')) return `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M8 4 L16 4 L16 12 L12 20 L8 12 Z" fill="none" stroke="#2288cc" stroke-width="2"/><circle cx="12" cy="8" r="2" fill="#2288cc"/></svg>`;
+            if (n.includes('CONSTRUCTOR')) return `<svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="12" r="6" stroke="#ffaa00" stroke-width="2" fill="none"/><path d="M12 6 L12 0 M12 18 L12 24 M6 12 L0 12 M18 12 L24 12" stroke="#ffaa00" stroke-width="2"/></svg>`;
+            if (n.includes('BOMB') || n.includes('MINE')) return `<svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="12" r="6" fill="#ff4444"/><path d="M12 2 L12 6 M12 18 L12 22 M2 12 L6 12 M18 12 L22 12 M5 5 L8 8 M16 16 L19 19 M5 19 L8 16 M16 8 L19 5" stroke="#ff4444" stroke-width="2"/></svg>`;
+            
+            // Generic Utility Fallback
+            return `<svg viewBox="0 0 24 24" width="28" height="28"><rect x="5" y="5" width="14" height="14" stroke="#88aadd" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="3" fill="#88aadd"/></svg>`;
+        }
+
+        function updateUI() {
+            if (isGameOver) {
+                document.getElementById('bottom-left-ui').style.display = 'none';
+                document.getElementById('target-ui').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('bottom-left-ui').style.display = 'flex';
+
+            document.getElementById('ship-name-header').innerHTML = `<span>${player.name}</span> <span id="jump-status-display" style="color:#00ff00; font-size:10px;">READY</span>`;
+            document.getElementById('ship-name-header').style.color = player.faction.color;
+            
+            // Render Compact Gadget Grid with Icons
+            const gadgetListEl = document.getElementById('gadget-list');
+            gadgetListEl.innerHTML = ''; 
+            player.gadgets.forEach(g => {
+                let statusClass = 'ready';
+                if (!g.hasEnergy() && g.type === 'WEAPON') { statusClass = 'no-energy'; }
+                else if (!g.isReady()) { statusClass = 'cooldown'; }
+
+                let cdPct = (1.0 - g.getCooldownPct()) * 100;
+                let displayName = g.name.replace(/^Weapon/i, '').replace(/^Armor/i, 'Armor ').toUpperCase();
+                if (g.type === 'CONSTRUCTOR') displayName = "CONSTRUCTOR BAY";
+                
+                let iconSVG = getGadgetIcon(g.type, displayName);
+
+                gadgetListEl.innerHTML += `
+                    <div class="gadget-btn ${statusClass}" title="${displayName}\nEnergy Cost: ${g.energyCost || 0}\nCooldown: ${g.cooldown/1000}s">
+                        <div class="gadget-icon-container">${iconSVG}</div>
+                        <div class="gadget-sub">${g.energyCost > 0 ? g.energyCost : ''}</div>
+                        <div class="gadget-cd-overlay" style="height: ${cdPct}%"></div>
+                    </div>
+                `;
+            });
+
+            // Velocity Bar
+            let spd = Math.abs(player.currentSpeed * 10);
+            let maxSpd = player.maxSpeed * 10;
+            document.getElementById('velocity-text').innerText = `${spd.toFixed(2)} / ${maxSpd.toFixed(2)} Velocity`;
+            document.getElementById('velocity-bar').style.width = `${(spd / maxSpd) * 100}%`;
+
+            // Heading Bar (-180 to 180 formatting)
+            let headingDeg = ((player.angle + Math.PI/2) * 180 / Math.PI);
+            if (headingDeg > 180) headingDeg -= 360; // Normalize to -180/180
+            let displayHeading = Math.round(headingDeg);
+            let headingPct = ((headingDeg + 180) / 360) * 100; // Visual bar maps -180 to 0% and 180 to 100%
+            document.getElementById('heading-text').innerText = `${displayHeading} Heading`;
+            document.getElementById('heading-bar').style.width = `${headingPct}%`;
+
+            // Hull Bar
+            let hullPct = (player.health / player.maxHealth) * 100;
+            document.getElementById('hull-text').innerText = `${Math.floor(player.health)} / ${player.maxHealth} (${Math.round(hullPct)}%) Hull`;
+            document.getElementById('hull-bar').style.width = `${Math.max(0, hullPct)}%`;
+
+            // Energy Bar
+            let nrgPct = (player.energy / player.maxEnergy) * 100;
+            document.getElementById('energy-text').innerText = `${Math.floor(player.energy)} / ${player.maxEnergy} Energy`;
+            document.getElementById('energy-bar').style.width = `${Math.min(100, nrgPct)}%`;
+
+            // Signature Bar (Calculated based on size & speed for now)
+            let sig = (player.radius / 50) + (spd / 5);
+            let maxSig = 5.0; // Arbitrary cap for the UI bar fill
+            document.getElementById('sig-text').innerText = `${sig.toFixed(2)} Signature`;
+            document.getElementById('sig-bar').style.width = `${Math.min(100, (sig / maxSig) * 100)}%`;
+
+            // Jump Status Logic
+            const jumpEl = document.getElementById('jump-status-display');
+            if (player.jumpState === 'SPOOLING') { jumpEl.innerText = `SPOOLING ${Math.ceil(player.jumpTimer/60)}s`; jumpEl.style.color = '#ffaa00'; }
+            else if (player.jumpState === 'JUMPING') { jumpEl.innerText = "IN TRANSIT"; jumpEl.style.color = '#ffffff'; }
+            else if (player.jumpState === 'COOLDOWN') { jumpEl.innerText = `COOLDOWN ${Math.ceil(player.jumpTimer/60)}s`; jumpEl.style.color = '#ff3333'; }
+            else if (player.fuel < player.jumpCost) { jumpEl.innerText = "NO FUEL"; jumpEl.style.color = '#ff3333'; }
+            else if (!player.navTarget) { jumpEl.innerText = "NO TARGET"; jumpEl.style.color = '#888'; }
+            else { jumpEl.innerText = "JUMP READY"; jumpEl.style.color = '#00ff00'; }
+
+            let canBuildPrompt = false;
+            if (player.canBuild && player.jumpState === 'IDLE' && !isPlanetViewOpen) {
+                for (let b of celestialBodies) {
+                    if (!b.isSun && Math.hypot(player.x - b.x, player.y - b.y) < b.radius + 1500 && b.faction.id === player.faction.id) { canBuildPrompt = true; break; }
+                }
+            }
+            document.getElementById('build-prompt').style.display = canBuildPrompt ? 'block' : 'none';
+
+            scannedTarget = null;
+            for (let b of celestialBodies) {
+                if (!b.isSun && Math.abs(worldMouse.x - b.x) < b.radius*2 && Math.abs(worldMouse.y - b.y) < b.radius*2) {
+                    if (Math.hypot(worldMouse.x - b.x, worldMouse.y - b.y) < b.radius * 1.5) { scannedTarget = b; break; }
+                }
+            }
+
+            const tUi = document.getElementById('target-ui');
+            if (tUi) {
+                if (scannedTarget && !isPlanetViewOpen) {
+                    tUi.style.display = 'block'; 
+                    document.getElementById('target-name').innerText = scannedTarget.name.toUpperCase();
+                    document.getElementById('target-name').style.color = scannedTarget.faction.color;
+                    document.getElementById('target-faction').innerText = scannedTarget.faction.name; 
+                    document.getElementById('target-faction').className = scannedTarget.faction.class;
+                    
+                    document.getElementById('target-class').innerText = scannedTarget.type.charAt(0).toUpperCase() + scannedTarget.type.slice(1);
+                    document.getElementById('target-pop').innerText = "0 M"; // Placeholder until pop mechanics added
+                    
+                    // Faking a defense bar based on resource nodes for visual flavor for now
+                    let defPct = scannedTarget.stats ? (scannedTarget.stats.res / 5000) * 100 : 100;
+                    document.getElementById('target-defense-bar').style.width = `${Math.min(100, Math.max(0, defPct))}%`;
+                    
+                } else tUi.style.display = 'none';
+            }
+
+            document.getElementById('fps-counter').innerText = `${Math.round(fps)} FPS`;
+            if (fps < 30) document.getElementById('fps-counter').style.color = '#ff4444'; else document.getElementById('fps-counter').style.color = '#44ff44';
+        }
+
+        function drawNavHUD(ctx) {
+            if (!player || !player.navTarget) return;
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)'; ctx.lineWidth = 2 / camera.zoom; ctx.setLineDash([20 / camera.zoom, 20 / camera.zoom]);
+            ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.navTarget.x, player.navTarget.y); ctx.stroke(); ctx.setLineDash([]); 
+            ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 4 / camera.zoom; const size = 300 / camera.zoom; const tx = player.navTarget.x; const ty = player.navTarget.y;
+            ctx.beginPath();
+            ctx.moveTo(tx-size, ty-size*0.5); ctx.lineTo(tx-size, ty-size); ctx.lineTo(tx-size*0.5, ty-size);
+            ctx.moveTo(tx+size, ty-size*0.5); ctx.lineTo(tx+size, ty-size); ctx.lineTo(tx+size*0.5, ty-size);
+            ctx.moveTo(tx-size, ty+size*0.5); ctx.lineTo(tx-size, ty+size); ctx.lineTo(tx-size*0.5, ty+size);
+            ctx.moveTo(tx+size, ty+size*0.5); ctx.lineTo(tx+size, ty+size); ctx.lineTo(tx+size*0.5, ty+size);
+            ctx.moveTo(tx, ty); ctx.arc(tx, ty, 10 / camera.zoom, 0, Math.PI*2); ctx.stroke();
+        }
+
+        function initStars() {
+            for(let i=0; i<1000; i++) staticStars.push({ x: Math.random(), y: Math.random(), size: Math.random() * 2, layer: Math.random() > 0.7 ? 1 : 2, alpha: 0.3 + Math.random() * 0.7 });
+        }
+
+        function drawFastStars(ctx) {
+            ctx.fillStyle = '#ffffff'; const vW = width / camera.zoom; const vH = height / camera.zoom;
+            for(let i=0; i<staticStars.length; i++) {
+                const s = staticStars[i]; const parallax = s.layer === 1 ? 0.1 : 0.5;
+                let sx = (s.x * vW * 2 + (camera.x * parallax)) % vW; let sy = (s.y * vH * 2 + (camera.y * parallax)) % vH;
+                if (sx < 0) sx += vW; if (sy < 0) sy += vH; sx = sx - vW/2 + camera.x; sy = sy - vH/2 + camera.y;
+                ctx.globalAlpha = s.alpha * (s.layer === 1 ? 0.4 : 0.8); ctx.fillRect(sx, sy, s.size, s.size);
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        function updateDeployMenu() {
+            const container = document.getElementById('dynamic-ship-list');
+            container.innerHTML = '';
+            
+            let count = 0;
+            for (let key in SHIP_DATABASE) {
+                if (SHIP_DATABASE[key].factionId === selectedFactionForDeploy) {
+                    const btn = document.createElement('button');
+                    btn.className = 'deploy-btn';
+                    btn.innerHTML = `DEPLOY ${SHIP_DATABASE[key].name}<br><span style="font-size:10px; color:#888;">Class: ${SHIP_DATABASE[key].type}</span>`;
+                    btn.onclick = () => deployShip(key);
+                    container.appendChild(btn);
+                    count++;
+                }
+            }
+            
+            if (count === 0) {
+                container.innerHTML = `<p style="color:#ff3333; margin-top:20px;">No ships found in database for this faction. Did you load ships.json?</p>`;
+            }
+        }
+
+        function selectFaction(id) {
+            selectedFactionForDeploy = id;
+            document.getElementById('fac-btn-1').className = id === 1 ? 'faction-btn active-ugto' : 'faction-btn';
+            document.getElementById('fac-btn-2').className = id === 2 ? 'faction-btn active-icc' : 'faction-btn';
+            document.getElementById('fac-btn-3').className = id === 3 ? 'faction-btn active-kluth' : 'faction-btn';
+            updateDeployMenu();
+        }
+
+        function deployShip(shipKey) {
+            const facData = Object.values(FACTIONS).find(f => f.id === selectedFactionForDeploy);
+            player = new Ship(facData.capital.x, facData.capital.y + 1000, shipKey, selectedFactionForDeploy);
+            camera.x = player.x; camera.y = player.y; camera.zoom = 0.05; camera.targetZoom = 0.05;
+            projectiles = []; particles = []; score = 0; isGameOver = false;
+            document.getElementById('deploy-menu').style.display = 'none';
+        }
+
+        function initSystem() {
+            const sun = new CelestialBody(0, 0, 4500, 'sun', {base: '#ffaa00'}, 'Sol Alpha', FACTIONS.NEUTRAL, null);
+            celestialBodies.push(sun);
+            celestialBodies.push(new CelestialBody(10000, 3000, 450, 'barren', {base: '#aa4422'}, 'Vulcan', FACTIONS.NEUTRAL, sun));
+
+            const terraNova = new CelestialBody(-20000, 18500, 800, 'terrestrial', {base: '#114488', land: '#33aa44'}, 'Terra Nova (Capital)', FACTIONS.UGTO, sun);
+            celestialBodies.push(terraNova);
+            celestialBodies.push(new CelestialBody(-18000, 18500, 150, 'barren', {base: '#888888'}, 'Luna', FACTIONS.UGTO, terraNova));
+            celestialBodies.push(new CelestialBody(-21200, 16500, 180, 'barren', {base: '#777777'}, 'Aegis Base', FACTIONS.UGTO, terraNova));
+            
+            const oceanus = new CelestialBody(-35000, 15000, 600, 'terrestrial', {base: '#0066aa', land: '#0088cc'}, 'Oceanus', FACTIONS.UGTO, sun);
+            celestialBodies.push(oceanus);
+            celestialBodies.push(new CelestialBody(-36500, 15500, 220, 'barren', {base: '#555566'}, 'Triton', FACTIONS.UGTO, oceanus));
+            
+            const borealis = new CelestialBody(-30000, 37000, 1500, 'gas', {base: '#aaeeff', stripe: '#ffffff'}, 'Borealis', FACTIONS.UGTO, sun);
+            celestialBodies.push(borealis);
+            celestialBodies.push(new CelestialBody(-25000, 37000, 300, 'barren', {base: '#dddddd'}, 'Ice Moon Alpha', FACTIONS.UGTO, borealis));
+            celestialBodies.push(new CelestialBody(-30000, 32000, 270, 'barren', {base: '#cccccc'}, 'Ice Moon Beta', FACTIONS.UGTO, borealis));
+
+            const ignis = new CelestialBody(22500, -12500, 600, 'barren', {base: '#bb5533'}, 'Ignis Prime', FACTIONS.ICC, sun);
+            celestialBodies.push(ignis);
+            celestialBodies.push(new CelestialBody(24500, -12500, 220, 'barren', {base: '#994422'}, 'Ignis Secundus', FACTIONS.ICC, ignis));
+            
+            const ares = new CelestialBody(35000, -25000, 675, 'terrestrial', {base: '#882222', land: '#aa4422'}, 'Ares', FACTIONS.ICC, sun);
+            celestialBodies.push(ares);
+            celestialBodies.push(new CelestialBody(33200, -26200, 120, 'barren', {base: '#555555'}, 'Deimos', FACTIONS.ICC, ares));
+            celestialBodies.push(new CelestialBody(36500, -23200, 165, 'barren', {base: '#666666'}, 'Phobos', FACTIONS.ICC, ares));
+
+            const zephyr = new CelestialBody(20000, -35000, 1350, 'gas', {base: '#ffccaa', stripe: '#dd9977', ring: 'rgba(255,200,150,0.4)'}, 'Zephyr', FACTIONS.ICC, sun);
+            celestialBodies.push(zephyr);
+            celestialBodies.push(new CelestialBody(20000, -28700, 375, 'barren', {base: '#887766'}, 'Zephyr Outpost', FACTIONS.ICC, zephyr));
+
+            const xylar = new CelestialBody(-22500, -22500, 1800, 'bio', {base: '#1a052a', vein: '#aa33ff'}, 'Xylar Hive', FACTIONS.KLUTH, sun);
+            celestialBodies.push(xylar);
+            celestialBodies.push(new CelestialBody(-27500, -22500, 450, 'bio', {base: '#110022', vein: '#ff33aa'}, 'Spawning Pool 1', FACTIONS.KLUTH, xylar));
+            celestialBodies.push(new CelestialBody(-20000, -27500, 375, 'bio', {base: '#110022', vein: '#44ff44'}, 'Spawning Pool 2', FACTIONS.KLUTH, xylar));
+
+            const gorgon = new CelestialBody(-37500, -10000, 600, 'bio', {base: '#223311', vein: '#88ff22'}, 'Gorgon', FACTIONS.KLUTH, sun);
+            celestialBodies.push(gorgon);
+            celestialBodies.push(new CelestialBody(-39500, -11200, 225, 'bio', {base: '#112200', vein: '#88ff22'}, 'Gorgon Eye', FACTIONS.KLUTH, gorgon));
+
+            const tartarus = new CelestialBody(37500, 37500, 1650, 'gas', {base: '#554466', stripe: '#332244'}, 'Tartarus Fringe', FACTIONS.NEUTRAL, sun);
+            celestialBodies.push(tartarus);
+            celestialBodies.push(new CelestialBody(42500, 37500, 450, 'barren', {base: '#444444'}, 'Pirate Haven', FACTIONS.NEUTRAL, tartarus));
+
+            const beltRadius = 52000;
+            for(let i=0; i<600; i++) {
+                let a = Math.random() * Math.PI * 2; let d = beltRadius + (Math.random() - 0.5) * 8000;
+                asteroids.push(new Asteroid(Math.cos(a)*d, Math.sin(a)*d, 40 + Math.random()*80));
+            }
+
+            nebulas.push(new Nebula(30000, 20000, 10000, [[0, 'rgba(50,150,200,0.1)'], [1, 'rgba(0,0,0,0)']]));
+            nebulas.push(new Nebula(-40000, -30000, 12000, [[0, 'rgba(150,50,200,0.1)'], [0.5, 'rgba(100,20,150,0.05)'], [1, 'rgba(0,0,0,0)']]));
+        }
+
+        async function loadDatabases() {
+            try {
+                document.getElementById('loading').innerText = "DOWNLOADING GADGETS...";
+                
+                // Fetch the JS Gadget file
+                const gadgetReq = await fetch('https://raw.githubusercontent.com/CrimDS/DSBrowser-Assets/refs/heads/main/gadget_database_output.js');
+                const gadgetText = await gadgetReq.text();
+                
+                // Because it's a JS file with single quotes, JSON.parse() won't work, and GitHub blocks <script> tags.
+                // We strip the "const GADGET_DATABASE = " and safely evaluate the raw object directly!
+                let objStr = gadgetText.replace(/const\s+GADGET_DATABASE\s*=\s*/, '').trim().replace(/;$/, '');
+                GADGET_DATABASE = new Function("return " + objStr)();
+
+                // Manually inject the Constructor Bay so we don't break planet building if it isn't in your DS files yet
+                if (!GADGET_DATABASE['CONSTRUCTOR_BAY']) {
+                    GADGET_DATABASE['CONSTRUCTOR_BAY'] = {'id': 'CONSTRUCTOR_BAY', 'name': 'Combat Engineer Bay', 'type': 'CONSTRUCTOR', 'energyCost': 0, 'cooldown': 1000};
+                }
+
+                document.getElementById('loading').innerText = "DOWNLOADING SHIPS...";
+                
+                // Fetch the Ships JSON
+                const shipsReq = await fetch('https://raw.githubusercontent.com/CrimDS/DSBrowser-Assets/refs/heads/main/ships.json');
+                RAW_SHIPS_JSON = await shipsReq.json();
+                
+                loadShipsFromJSON(RAW_SHIPS_JSON);
+                
+            } catch (e) {
+                console.error("Could not load external JSONs:", e);
+                document.getElementById('loading').innerText = "DATABASE LOAD FAILED. CHECK CONSOLE.";
+                document.getElementById('loading').style.color = "#ff3333";
+            }
+        }
+
+        async function init() {
+            initSystem(); initStars(); initSprites(); // Initialize the sprite manager
+            await loadDatabases(); // Pause here until GitHub finishes sending the JSONs
+            updateDeployMenu(); // Populate the dynamic spawn menu
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('deploy-menu').style.display = 'block';
+            gameLoop();
+        }
+
+        function gameLoop(time) {
+            frames++;
+            if (time - lastTime >= 1000) { fps = (frames * 1000) / (time - lastTime); frames = 0; lastTime = time; }
+
+            // Economy Ticks (Once per second approx)
+            if (frames % 60 === 0) {
+                for (let b of celestialBodies) {
+                    if (b.type !== 'sun' && b.stats && b.stats.hasHub) {
+                        b.stats.res += b.stats.mineRate;
+                    }
+                }
+                if (isPlanetViewOpen && activePlanet) updatePlanetStatsUI();
+            }
+
+            if (!isGameOver) {
+                if (!isPlanetViewOpen) {
+                    camera.zoom += (camera.targetZoom - camera.zoom) * 0.1;
+                    camera.x += (player.x - camera.x) * 0.2; camera.y += (player.y - camera.y) * 0.2;
+                }
+
+                worldMouse.x = (mouse.x - width/2) / camera.zoom + camera.x;
+                worldMouse.y = (mouse.y - height/2) / camera.zoom + camera.y;
+
+                ctx.fillStyle = '#020205'; ctx.fillRect(0, 0, width, height);
+
+                ctx.save(); ctx.translate(width / 2, height / 2); ctx.scale(camera.zoom, camera.zoom); ctx.translate(-camera.x, -camera.y);
+
+                nebulas.forEach(n => n.draw(ctx)); drawFastStars(ctx);
+                
+                if (camera.zoom <= 0.1) {
+                    ctx.strokeStyle = `rgba(0, 255, 255, 0.1)`; ctx.lineWidth = 2 / camera.zoom;
+                    const gs = 25000; const vW = width/camera.zoom; const vH = height/camera.zoom;
+                    const sX = Math.floor((camera.x-vW/2)/gs)*gs; const sY = Math.floor((camera.y-vH/2)/gs)*gs;
+                    ctx.beginPath();
+                    for (let x=sX; x<=sX+vW+gs; x+=gs) { ctx.moveTo(x, sY); ctx.lineTo(x, sY+vH+gs); }
+                    for (let y=sY; y<=sY+vH+gs; y+=gs) { ctx.moveTo(sX, y); ctx.lineTo(sX+vW+gs, y); }
+                    ctx.stroke();
+                }
+
+                celestialBodies.forEach(b => b.draw(ctx)); asteroids.forEach(a => { a.update(); a.draw(ctx); });
+                drawNavHUD(ctx); player.update(); player.draw(ctx);
+
+                for (let i = projectiles.length - 1; i >= 0; i--) { projectiles[i].update(); projectiles[i].draw(ctx); if (projectiles[i].life <= 0) projectiles.splice(i, 1); }
+                for (let i = particles.length - 1; i >= 0; i--) { particles[i].update(); particles[i].draw(ctx); if (particles[i].alpha <= 0) particles.splice(i, 1); }
+
+                ctx.restore(); 
+
+                checkCollisions(); updateUI();
+                
+                // Keep active planet view rendering updated for construction animations
+                if (isPlanetViewOpen && activePlanet) drawPlanetView();
+            } else {
+                ctx.fillStyle = '#020205'; ctx.fillRect(0, 0, width, height);
+                ctx.save(); ctx.translate(width / 2, height / 2); ctx.scale(camera.zoom, camera.zoom); ctx.translate(-camera.x, -camera.y);
+                drawFastStars(ctx); camera.x += 10;
+                ctx.restore();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => setTimeout(init, 100);
+    </script>
+</body>
+</html>
